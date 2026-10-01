@@ -1,0 +1,10 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name"],
+	"additionalProperties": false,
+	"properties": {
+		"name": { "type": "string", "description": "The project name" },
+		"color": { "enum": ["red", "blue"], "description": "A primary color" }
+	}
+}

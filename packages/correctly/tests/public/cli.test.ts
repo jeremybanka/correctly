@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import { stripVTControlCharacters, styleText } from "node:util"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { expect, test } from "vite-plus/test"
@@ -72,8 +73,7 @@ test("readable CLI groups files with ordered diagnostics, source ranges, and con
 	expect(result.status).toBe(1)
 	expect(result.stderr).toBe("")
 	expect(result.stdout).toMatchInlineSnapshot(`
-		"data/invalid.json  3 errors
-		  json; schema; project → schema.json
+		"data/invalid.json  3 errors  ·  JSON against project (schema.json)
 		├─ 2:11  schema/type
 		│  1 │ {
 		│  2 │   "name": 42,
@@ -83,7 +83,7 @@ test("readable CLI groups files with ordered diagnostics, source ranges, and con
 		├─ 3:12  schema/enum
 		│  3 │   "color": "green",
 		│    │            ^^^^^^^
-		│    ╰─ /color: must be equal to one of the allowed values
+		│    ╰─ /color: must be one of: "red", "blue"
 		│
 		└─ 4:3  schema/additionalProperties
 		   4 │   "debug": true
@@ -91,8 +91,7 @@ test("readable CLI groups files with ordered diagnostics, source ranges, and con
 		   5 │ }
 		     ╰─ /debug: must NOT have additional properties
 
-		data/missing-name.json  1 error
-		  json; schema; project → schema.json
+		data/missing-name.json  1 error  ·  JSON against project (schema.json)
 		└─ 1:1  schema/required
 		   1 │ {
 		     │ ^
@@ -136,6 +135,91 @@ test("excerpts use the validated source snapshot and preserve JSON diagnostic or
 	expect(sources.has(file)).toBe(true)
 })
 
+test("terminal colors follow Lasertag's palette, honor overrides, and leave JSON unstyled", async () => {
+	const { root } = await setup()
+	await put(root, "data/test.json", '{\n  "name": 42\n}')
+	const environment = { ...process.env }
+	delete environment.FORCE_COLOR
+	delete environment.NO_COLOR
+	delete environment.NODE_DISABLE_COLORS
+	const invoke = (env: NodeJS.ProcessEnv, args: string[] = []) =>
+		spawnSync(process.execPath, [entry, "check", ...args], {
+			cwd: root,
+			encoding: "utf8",
+			env: { ...environment, ...env },
+		})
+	const plain = invoke({})
+	expect(plain.status).toBe(1)
+	expect(stripVTControlCharacters(plain.stdout)).toBe(plain.stdout)
+	const colored = invoke({ FORCE_COLOR: "1" })
+	expect(colored.status).toBe(1)
+	expect(colored.stderr).toBe("")
+	expect(stripVTControlCharacters(colored.stdout)).toBe(plain.stdout)
+	const styled = (format: Parameters<typeof styleText>[0], text: string) =>
+		styleText(format, text, { validateStream: false })
+	for (const [format, text] of [
+		["bold", "data/test.json"],
+		[["bold", "red"], "1 error"],
+		["cyan", "schema/type"],
+		[["bold", "yellow"], "^^"],
+		["dim", "1 │"],
+	] as const)
+		expect(colored.stdout).toContain(styled(format, text))
+	for (const env of [
+		{ NO_COLOR: "1" },
+		{ FORCE_COLOR: "0" },
+		{ NODE_DISABLE_COLORS: "1" },
+	]) {
+		const disabled = invoke(env)
+		expect(disabled.status).toBe(1)
+		expect(disabled.stdout).toBe(plain.stdout)
+	}
+	const json = invoke({ FORCE_COLOR: "1" }, ["--format", "json"])
+	expect(json.status).toBe(1)
+	expect(stripVTControlCharacters(json.stdout)).toBe(json.stdout)
+	expect(JSON.parse(json.stdout)).toEqual(await check({ cwd: root }))
+	await put(root, "data/test.json", { name: "valid" })
+	const valid = invoke({ FORCE_COLOR: "1" })
+	expect(valid.status).toBe(0)
+	expect(valid.stdout).toContain(styled(["bold", "green"], "✓ Check passed"))
+	await put(root, "correctly.config.json", {
+		associations: [{ files: ["data/**"], schema: "missing.json" }],
+	})
+	const failed = invoke({ FORCE_COLOR: "1" })
+	expect(failed.status).toBe(2)
+	expect(failed.stdout).toContain(
+		styled(["bold", "red"], "▲ Check failed with 1 failure"),
+	)
+})
+
+test("headers explicitly describe syntax-only coverage, JSONC mode, and null-schema associations", async () => {
+	const { root } = await setup(
+		{},
+		{
+			files: ["data/**"],
+			associations: [
+				{
+					name: "Comments",
+					files: ["data/named.jsonc"],
+					mode: "jsonc",
+					schema: null,
+				},
+			],
+		},
+	)
+	await put(root, "data/plain.json", "{}")
+	await put(root, "data/named.jsonc", "{/* comment */}")
+	const report = await check({ cwd: root })
+	expect(report.exitCode).toBe(0)
+	const output = readableReport(report, { cwd: root, color: false })
+	expect(output).toContain(
+		"data/plain.json  valid  ·  JSON syntax only (no schema association)",
+	)
+	expect(output).toContain(
+		"data/named.jsonc  valid  ·  JSONC syntax only (association: Comments)",
+	)
+})
+
 test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF errors", async () => {
 	const { root } = await setup()
 	await put(
@@ -149,8 +233,7 @@ test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF err
 	})
 	expect(result.status).toBe(1)
 	expect(result.stdout).toMatchInlineSnapshot(`
-		"data/test.json  1 error
-		  json; schema; project → schema.json
+		"data/test.json  1 error  ·  JSON against project (schema.json)
 		└─ 3:2  duplicate-key
 		   2 │     "name": 42,
 		   3 │     "name": "duplicate"
@@ -172,8 +255,7 @@ test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF err
 	})
 	expect(eof.status).toBe(1)
 	expect(eof.stdout).toMatchInlineSnapshot(`
-		"data/test.json  2 errors
-		  json; schema; project → schema.json
+		"data/test.json  2 errors  ·  JSON against project (schema.json)
 		├─ 2:10  syntax
 		│  1 │ {
 		│  2 │   "name":
@@ -227,9 +309,7 @@ test("errors take precedence over invalid inputs and excluded files are visible"
 	).toEqual([])
 	const output = readableReport(report, { cwd: root })
 	expect(output).toContain("data/missing.json  1 failure\n└─ execution:")
-	expect(output).toContain(
-		"node_modules/ignored.json  excluded\n  json; excluded",
-	)
+	expect(output).toContain("node_modules/ignored.json  excluded  ·  JSON")
 	expect(output).toContain("▲ Check failed with 1 failure")
 })
 

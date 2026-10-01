@@ -1,0 +1,10 @@
+{
+	"files": ["valid.json", "invalid.json", "missing-name.json"],
+	"associations": [
+		{
+			"name": "Project",
+			"files": ["*.json"],
+			"schema": "project.schema.json"
+		}
+	]
+}

@@ -74,10 +74,14 @@ function validationDiagnostic(
 	const rangeNode =
 		error.keyword === "required" ? parsed.locate(error.instancePath) : node
 	const length = error.keyword === "required" ? 1 : rangeNode?.length
+	const message =
+		error.keyword === "enum" && Array.isArray(error.params.allowedValues)
+			? `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
+			: (error.message ?? "Schema violation")
 	return diagnostic(
 		text,
 		`schema/${error.keyword}`,
-		`${jsonPointer || "/"}: ${error.message ?? "Schema violation"}`,
+		`${jsonPointer || "/"}: ${message}`,
 		jsonPointer,
 		rangeNode?.offset ?? 0,
 		length ?? 1,

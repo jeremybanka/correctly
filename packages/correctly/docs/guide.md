@@ -75,11 +75,10 @@ correctly-lsp --stdio
 
 Exit 0 means no validation or infrastructure failures; exit 1 means at least one invalid document; exit 2 means a configuration/schema/loading/execution failure, which takes priority over document errors. All configured associations are prepared even when their patterns match no documents, preventing unused broken schema maps from going unnoticed. Readable output identifies every file's coverage and selected association. JSON output is a single object without progress text or a filtering workaround.
 
-Readable output follows Lasertag's file sections: a heading with error/failure counts, diagnostics sorted by source position, and numbered source excerpts with carets marking each affected range. Excerpts use the exact text validated, expand tabs to four spaces, and include one context line on each side unless that line has another diagnostic. Long ranges show their first and last lines with an ellipsis between them. Paths inside the current directory are relative; other paths remain absolute. Missing required properties point to the containing object, while the diagnostic's JSON pointer names the missing property.
+Readable output follows Lasertag's file sections: a heading with the file name, error/failure counts, parsing mode, and selected schema; diagnostics sorted by source position; and numbered source excerpts with carets marking each affected range. Files without a schema explicitly say `syntax only`. Excerpts use the exact text validated, expand tabs to four spaces, and include one context line on each side unless that line has another diagnostic. Long ranges show their first and last lines with an ellipsis between them. Paths inside the current directory are relative; other paths remain absolute. Missing required properties point to the containing object, while the diagnostic's JSON pointer names the missing property. Enum violations list the allowed values as JSON, including values from referenced schemas; the CLI and editor use the same messages.
 
 ```text
-data/project.json  1 error
-  json; schema; Project → schemas/project.schema.json
+data/project.json  1 error  ·  JSON against Project (schemas/project.schema.json)
 └─ 2:11  schema/type
    1 │ {
    2 │   "name": 42
@@ -87,6 +86,8 @@ data/project.json  1 error
    3 │ }
      ╰─ /name: must be string
 ```
+
+Readable reports use terminal colors automatically: bold file names, red error counts, cyan diagnostic codes, yellow carets, and dim context/gutters. Success summaries are green. Set `NO_COLOR=1` or `FORCE_COLOR=0` to disable colors, or `FORCE_COLOR=1` to force them when piping output. JSON reports never include ANSI styling.
 
 `reportVersion: 1` contains `config`, sorted `files`, top-level `failures`, `summary`, and `exitCode`. Each file has `file`, `mode`, `coverage`, `association`, `diagnostics`, and `failures`. Diagnostics contain `code`, `message`, `pointer`, `offset`, `length`, and `range`; failures contain `code`, `message`, and optionally `file`. Paths are absolute. Messages reflect the pinned validator/parser versions; consumers should use codes and pointers rather than parsing message prose.
 

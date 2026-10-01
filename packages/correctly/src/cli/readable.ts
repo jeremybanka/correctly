@@ -1,11 +1,35 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { styleText } from "node:util"
 import type { Diagnostic, Failure, FileResult, Report } from "../core/types.ts"
 
 export type ReadableOptions = {
 	cwd?: string
 	sources?: ReadonlyMap<string, string>
+	color?: boolean
 }
+
+// Node's automatic color detection respects the output stream and NO_COLOR,
+// NODE_DISABLE_COLORS, and FORCE_COLOR. Use the same palette as Lasertag.
+function createStyler(color?: boolean) {
+	const apply = (format: Parameters<typeof styleText>[0], text: string) =>
+		color === false
+			? text
+			: styleText(format, text, {
+					stream: process.stdout,
+					...(color === true ? { validateStream: false } : {}),
+				})
+	return {
+		bold: (text: string) => apply("bold", text),
+		bad: (text: string) => apply(["bold", "red"], text),
+		caret: (text: string) => apply(["bold", "yellow"], text),
+		code: (text: string) => apply("cyan", text),
+		dim: (text: string) => apply("dim", text),
+		success: (text: string) => apply(["bold", "green"], text),
+		warning: (text: string) => apply(["bold", "yellow"], text),
+	}
+}
+type Styler = ReturnType<typeof createStyler>
 
 function displayPath(cwd: string, file: string): string {
 	const relative = path.relative(cwd, file)
@@ -41,6 +65,7 @@ function excerpt(
 	source: string[],
 	diagnostic: Diagnostic,
 	diagnosedLines: ReadonlySet<number>,
+	styler: Styler,
 ) {
 	const start = diagnostic.range.start.line
 	const end = Math.min(lastSelectedLine(diagnostic), source.length - 1)
@@ -64,14 +89,16 @@ function excerpt(
 	const output: string[] = []
 	for (const line of visible) {
 		if (line === undefined) {
-			output.push(`${" ".repeat(width)} │ …`)
+			output.push(styler.dim(`${" ".repeat(width)} │ …`))
 			continue
 		}
 		const text = source[line]!
+		const selected = line >= start && line <= end
+		const expanded = text.replaceAll("\t", "    ").trimEnd()
 		output.push(
-			`${String(line + 1).padStart(width)} │ ${text.replaceAll("\t", "    ").trimEnd()}`,
+			`${styler.dim(`${String(line + 1).padStart(width)} │`)} ${selected ? expanded : styler.dim(expanded)}`,
 		)
-		if (line < start || line > end) continue
+		if (!selected) continue
 		const from = line === start ? diagnostic.range.start.character : 0
 		const to =
 			line === diagnostic.range.end.line
@@ -83,14 +110,18 @@ function excerpt(
 			text.slice(from, to).replaceAll("\t", "    ").length,
 		)
 		output.push(
-			`${" ".repeat(width)} │ ${" ".repeat(caretStart)}${"^".repeat(caretWidth)}`,
+			`${styler.dim(`${" ".repeat(width)} │`)} ${" ".repeat(caretStart)}${styler.caret("^".repeat(caretWidth))}`,
 		)
 	}
 	return { lines: output, width }
 }
 
 type FileGroup = { file: string; result?: FileResult; failures: Failure[] }
-function fileSection(group: FileGroup, options: ReadableOptions): string {
+function fileSection(
+	group: FileGroup,
+	options: ReadableOptions,
+	styler: Styler,
+): string {
 	const cwd = options.cwd ?? process.cwd()
 	const diagnostics = (group.result?.diagnostics ?? []).toSorted(
 		(a, b) => a.offset - b.offset,
@@ -104,13 +135,25 @@ function fileSection(group: FileGroup, options: ReadableOptions): string {
 	const status =
 		counts.join(", ") ||
 		(group.result?.coverage === "excluded" ? "excluded" : "valid")
-	const output = [`${displayPath(cwd, group.file)}  ${status}`]
+	const statusColor = counts.length
+		? styler.bad
+		: group.result?.coverage === "excluded"
+			? styler.dim
+			: styler.success
+	let header = `${styler.bold(displayPath(cwd, group.file))}  ${statusColor(status)}`
 	if (group.result) {
 		const { mode, coverage, association } = group.result
-		output.push(
-			`  ${mode}; ${coverage}${association ? `; ${association.name}${association.schema ? ` → ${displaySchema(cwd, association.schema)}` : ""}` : ""}`,
-		)
+		const format = mode.toUpperCase()
+		const schema = association?.schema
+		const description =
+			coverage === "excluded"
+				? format
+				: schema
+					? `${format} against ${association.name} (${displaySchema(cwd, schema)})`
+					: `${format} syntax only (${association ? `association: ${association.name}` : "no schema association"})`
+		header += `  ${styler.dim(`·  ${description}`)}`
 	}
+	const output = [header]
 	const text = options.sources?.get(group.file)
 	const source = text === undefined ? undefined : text.split(/\r\n|\r|\n/)
 	const diagnosedLines = new Set<number>()
@@ -130,16 +173,23 @@ function fileSection(group: FileGroup, options: ReadableOptions): string {
 		const continuation = last ? "   " : "│  "
 		if ("range" in issue) {
 			output.push(
-				`${branch} ${issue.range.start.line + 1}:${issue.range.start.character + 1}  ${issue.code}`,
+				`${styler.dim(branch)} ${styler.dim(`${issue.range.start.line + 1}:${issue.range.start.character + 1}`)}  ${styler.code(issue.code)}`,
 			)
-			const region = source ? excerpt(source, issue, diagnosedLines) : undefined
+			const region = source
+				? excerpt(source, issue, diagnosedLines, styler)
+				: undefined
 			if (region)
-				output.push(...region.lines.map((line) => `${continuation}${line}`))
+				output.push(
+					...region.lines.map((line) => `${styler.dim(continuation)}${line}`),
+				)
 			output.push(
-				`${continuation}${" ".repeat(region ? region.width + 1 : 0)}╰─ ${issue.message}`,
+				`${styler.dim(continuation)}${" ".repeat(region ? region.width + 1 : 0)}${styler.dim("╰─")} ${issue.message}`,
 			)
-		} else output.push(`${branch} ${issue.code}: ${issue.message}`)
-		if (!last) output.push("│")
+		} else
+			output.push(
+				`${styler.dim(branch)} ${styler.bad(issue.code)}: ${issue.message}`,
+			)
+		if (!last) output.push(styler.dim("│"))
 	}
 	return output.join("\n")
 }
@@ -148,6 +198,7 @@ export function readableReport(
 	report: Report,
 	options: ReadableOptions = {},
 ): string {
+	const styler = createStyler(options.color)
 	const groups = new Map<string, FileGroup>()
 	for (const result of report.files)
 		groups.set(result.file, {
@@ -170,9 +221,9 @@ export function readableReport(
 	}
 	const output = [...groups.values()]
 		.toSorted((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0))
-		.map((group) => fileSection(group, options))
+		.map((group) => fileSection(group, options, styler))
 	for (const error of globalFailures)
-		output.push(`${error.code}: ${error.message}`)
+		output.push(`${styler.bad(error.code)}: ${error.message}`)
 	const errors = report.files.reduce(
 		(count, file) => count + file.diagnostics.length,
 		0,
@@ -186,9 +237,13 @@ export function readableReport(
 				: "✓ Check passed"
 	output.push(
 		[
-			"─".repeat(56),
+			styler.dim("─".repeat(56)),
 			"",
-			status,
+			(report.exitCode === 2
+				? styler.bad
+				: report.exitCode === 1
+					? styler.warning
+					: styler.success)(status),
 			"",
 			`${s.checked} checked, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
 		].join("\n"),

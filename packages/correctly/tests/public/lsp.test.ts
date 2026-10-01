@@ -24,6 +24,7 @@ test("stdio LSP and CLI agree on document diagnostics; editor supplies hints", a
 	for (const [i, text] of [
 		"{",
 		'{"name":1}',
+		'{"name":"x","color":"green"}',
 		'{"color":"red"}',
 		'{"name":"x","extra":true}',
 		'{"name":"x","name":"y"}',
@@ -34,6 +35,10 @@ test("stdio LSP and CLI agree on document diagnostics; editor supplies hints", a
 		const report = await check({ cwd: root })
 		expect(report.exitCode).toBe(1)
 		const core = await engine.validate(file, text)
+		if (text.includes("green"))
+			expect(core.diagnostics[0]?.message).toBe(
+				'/color: must be one of: "red", "blue"',
+			)
 		expect(
 			editor.diagnostics.map((d) => ({
 				code: d.code,

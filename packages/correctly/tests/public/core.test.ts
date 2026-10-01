@@ -61,6 +61,43 @@ describe("parsing and diagnostics", () => {
 			]),
 		)
 	})
+	test.each([
+		"http://json-schema.org/draft-07/schema#",
+		"https://json-schema.org/draft/2020-12/schema",
+	])(
+		"enum diagnostics list allowed JSON values through references in %s",
+		async ($schema) => {
+			const { engine, file, root } = await setup({
+				$schema,
+				$ref: "values.json#/definitions/options",
+			})
+			await put(root, "values.json", {
+				definitions: {
+					options: {
+						enum: [
+							"red",
+							7,
+							true,
+							null,
+							{ mode: "safe" },
+							["x", 2],
+							'line\n"break',
+						],
+					},
+				},
+			})
+			const result = await engine.validate(file, '"invalid"')
+			expect(result.failures).toEqual([])
+			expect(result.diagnostics).toMatchObject([
+				{
+					code: "schema/enum",
+					pointer: "",
+					message:
+						'/: must be one of: "red", 7, true, null, {"mode":"safe"}, ["x",2], "line\\n\\"break"',
+				},
+			])
+		},
+	)
 	test("values, defaults and additional properties are never mutated", async () => {
 		const { engine } = await setup({
 			type: "object",
