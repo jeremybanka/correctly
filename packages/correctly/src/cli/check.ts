@@ -15,6 +15,7 @@ export type CheckOptions = {
 	config?: string
 	offline?: boolean
 	files?: string[]
+	onRead?: (file: string, text: string) => void
 }
 export async function check(options: CheckOptions = {}): Promise<Report> {
 	const report: Report = {
@@ -54,12 +55,10 @@ export async function check(options: CheckOptions = {}): Promise<Report> {
 				})
 		for (const file of [...new Set(files)].sort()) {
 			try {
-				report.files.push(
-					await engine.validate(
-						file,
-						isIncluded(project, file) ? await readFile(file, "utf8") : "",
-					),
-				)
+				const included = isIncluded(project, file)
+				const text = included ? await readFile(file, "utf8") : ""
+				if (included) options.onRead?.(file, text)
+				report.files.push(await engine.validate(file, text))
 			} catch (error) {
 				report.failures.push(failure(error, file))
 			}
@@ -81,27 +80,4 @@ export async function check(options: CheckOptions = {}): Promise<Report> {
 	return report
 }
 
-export function readableReport(report: Report): string {
-	const lines: string[] = []
-	for (const file of report.files) {
-		const association = file.association
-		lines.push(
-			`${file.file} [${file.mode}; ${file.coverage}${association ? `; ${association.name}${association.schema ? ` → ${association.schema}` : ""}` : ""}]`,
-		)
-		for (const d of file.diagnostics)
-			lines.push(
-				`  ${d.range.start.line + 1}:${d.range.start.character + 1} ${d.code} ${d.message}`,
-			)
-		for (const error of file.failures)
-			lines.push(`  ${error.code}: ${error.message}`)
-	}
-	for (const error of report.failures)
-		lines.push(
-			`${error.code}: ${error.message}${error.file ? ` (${error.file})` : ""}`,
-		)
-	const s = report.summary
-	lines.push(
-		`${s.checked} checked, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
-	)
-	return lines.join("\n")
-}
+export { readableReport } from "./readable.ts"

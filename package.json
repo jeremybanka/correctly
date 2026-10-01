@@ -24,6 +24,7 @@
 		"@dprint/markdown": "0.24.0",
 		"@dprint/oxc": "0.42.0",
 		"@dprint/toml": "0.8.0",
+		"correctly": "workspace:*",
 		"dprint": "0.58.0",
 		"dprint-plugin-yaml": "0.6.0",
 		"typescript": "7.0.2",

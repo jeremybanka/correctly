@@ -37,14 +37,24 @@ export async function run(
 			throw new Error(`Unknown command: ${positionals[0]}`)
 		if (values.format !== "json" && values.format !== "readable")
 			throw new Error(`Unknown report format: ${values.format}`)
+		const sources = new Map<string, string>()
 		const report = await check({
 			cwd,
 			files: positionals.slice(1),
 			...(values.config ? { config: values.config } : {}),
 			...(values.offline === undefined ? {} : { offline: values.offline }),
+			...(json
+				? {}
+				: {
+						onRead: (file: string, text: string) => {
+							sources.set(file, text)
+						},
+					}),
 		})
 		return {
-			output: json ? JSON.stringify(report, null, 2) : readableReport(report),
+			output: json
+				? JSON.stringify(report, null, 2)
+				: readableReport(report, { cwd, sources }),
 			exitCode: report.exitCode,
 		}
 	} catch (error) {
@@ -63,7 +73,9 @@ export async function run(
 			exitCode: 2,
 		}
 		return {
-			output: json ? JSON.stringify(report, null, 2) : readableReport(report),
+			output: json
+				? JSON.stringify(report, null, 2)
+				: readableReport(report, { cwd }),
 			exitCode: 2,
 		}
 	}

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { expect, test } from "vite-plus/test"
-import { check } from "../../src/cli/check.ts"
+import { check, readableReport } from "../../src/cli/check.ts"
 import { put, setup, temp } from "./helpers.ts"
 import type { Report } from "../../src/core/types.ts"
 
@@ -57,6 +57,162 @@ test("explicit config and file paths resolve from cwd; schemas resolve from the 
 	})
 })
 
+test("readable CLI groups files with ordered diagnostics, source ranges, and context", async () => {
+	const { root } = await setup()
+	await put(
+		root,
+		"data/invalid.json",
+		'{\n  "name": 42,\n  "color": "green",\n  "debug": true\n}\n',
+	)
+	await put(root, "data/missing-name.json", '{\n  "color": "blue"\n}\n')
+	const result = spawnSync(process.execPath, [entry, "check"], {
+		cwd: root,
+		encoding: "utf8",
+	})
+	expect(result.status).toBe(1)
+	expect(result.stderr).toBe("")
+	expect(result.stdout).toMatchInlineSnapshot(`
+		"data/invalid.json  3 errors
+		  json; schema; project → schema.json
+		├─ 2:11  schema/type
+		│  1 │ {
+		│  2 │   "name": 42,
+		│    │           ^^
+		│    ╰─ /name: must be string
+		│
+		├─ 3:12  schema/enum
+		│  3 │   "color": "green",
+		│    │            ^^^^^^^
+		│    ╰─ /color: must be equal to one of the allowed values
+		│
+		└─ 4:3  schema/additionalProperties
+		   4 │   "debug": true
+		     │   ^^^^^^^
+		   5 │ }
+		     ╰─ /debug: must NOT have additional properties
+
+		data/missing-name.json  1 error
+		  json; schema; project → schema.json
+		└─ 1:1  schema/required
+		   1 │ {
+		     │ ^
+		   2 │   "color": "blue"
+		     ╰─ /name: must have required property 'name'
+
+		────────────────────────────────────────────────────────
+
+		▲ Check found 4 errors in 2 files
+
+		2 checked, 2 schema-covered, 0 syntax-only, 2 invalid, 0 failures
+		"
+	`)
+	const json = spawnSync(
+		process.execPath,
+		[entry, "check", "--format", "json"],
+		{ cwd: root, encoding: "utf8" },
+	)
+	expect(JSON.parse(json.stdout)).toEqual(await check({ cwd: root }))
+})
+
+test("excerpts use the validated source snapshot and preserve JSON diagnostic order", async () => {
+	const { root, file } = await setup()
+	await put(root, "data/test.json", '{\n  "name": 42,\n  "debug": true\n}')
+	const sources = new Map<string, string>()
+	const report = await check({
+		cwd: root,
+		onRead: (file, text) => {
+			sources.set(file, text)
+		},
+	})
+	const serialized = JSON.stringify(report)
+	await put(root, "data/test.json", { name: "new contents" })
+	const output = readableReport(report, { cwd: root, sources })
+	expect(output).toContain('2 │   "name": 42,')
+	expect(output).not.toContain("new contents")
+	expect(output.indexOf("schema/type")).toBeLessThan(
+		output.indexOf("schema/additionalProperties"),
+	)
+	expect(JSON.stringify(report)).toBe(serialized)
+	expect(sources.has(file)).toBe(true)
+})
+
+test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF errors", async () => {
+	const { root } = await setup()
+	await put(
+		root,
+		"data/test.json",
+		'{\r\n\t"name": 42,\r\n\t"name": "duplicate"\r\n}\r\n',
+	)
+	const result = spawnSync(process.execPath, [entry, "check"], {
+		cwd: root,
+		encoding: "utf8",
+	})
+	expect(result.status).toBe(1)
+	expect(result.stdout).toMatchInlineSnapshot(`
+		"data/test.json  1 error
+		  json; schema; project → schema.json
+		└─ 3:2  duplicate-key
+		   2 │     "name": 42,
+		   3 │     "name": "duplicate"
+		     │     ^^^^^^
+		   4 │ }
+		     ╰─ Duplicate key "name"
+
+		────────────────────────────────────────────────────────
+
+		▲ Check found 1 error in 1 file
+
+		1 checked, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
+		"
+	`)
+	await put(root, "data/test.json", '{\n  "name":')
+	const eof = spawnSync(process.execPath, [entry, "check"], {
+		cwd: root,
+		encoding: "utf8",
+	})
+	expect(eof.status).toBe(1)
+	expect(eof.stdout).toMatchInlineSnapshot(`
+		"data/test.json  2 errors
+		  json; schema; project → schema.json
+		├─ 2:10  syntax
+		│  1 │ {
+		│  2 │   "name":
+		│    │          ^
+		│    ╰─ ValueExpected
+		│
+		└─ 2:10  syntax
+		   1 │ {
+		   2 │   "name":
+		     │          ^
+		     ╰─ CloseBraceExpected
+
+		────────────────────────────────────────────────────────
+
+		▲ Check found 2 errors in 1 file
+
+		1 checked, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
+		"
+	`)
+})
+
+test("long multiline ranges show their endpoints and elide the middle", async () => {
+	const { root } = await setup({ type: "string" })
+	await put(
+		root,
+		"data/test.json",
+		'{\n  "one": 1,\n  "two": 2,\n  "three": 3\n}',
+	)
+	const result = spawnSync(process.execPath, [entry, "check"], {
+		cwd: root,
+		encoding: "utf8",
+	})
+	expect(result.status).toBe(1)
+	expect(result.stdout).toContain(
+		"1 │ {\n     │ ^\n     │ …\n   5 │ }\n     │ ^",
+	)
+	expect(result.stdout).not.toContain('"two"')
+})
+
 test("errors take precedence over invalid inputs and excluded files are visible", async () => {
 	const { root } = await setup()
 	await put(root, "data/test.json", "{")
@@ -69,6 +225,12 @@ test("errors take precedence over invalid inputs and excluded files are visible"
 	expect(
 		report.files.find((f) => f.coverage === "excluded")?.diagnostics,
 	).toEqual([])
+	const output = readableReport(report, { cwd: root })
+	expect(output).toContain("data/missing.json  1 failure\n└─ execution:")
+	expect(output).toContain(
+		"node_modules/ignored.json  excluded\n  json; excluded",
+	)
+	expect(output).toContain("▲ Check failed with 1 failure")
 })
 
 test("configuration discovery and argument errors produce exit 2", async () => {

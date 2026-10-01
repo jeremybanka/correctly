@@ -193,6 +193,9 @@ importers:
       '@dprint/toml':
         specifier: 0.8.0
         version: 0.8.0
+      correctly:
+        specifier: workspace:*
+        version: link:packages/correctly
       dprint:
         specifier: 0.58.0
         version: 0.58.0
