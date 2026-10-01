@@ -54,6 +54,11 @@ function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
 }
 
 function validationMessage(error: ErrorObject): string {
+	if (error.keyword === "uniqueItems") {
+		const { i, j } = error.params
+		if (Number.isInteger(i) && Number.isInteger(j))
+			return `duplicates item at ${error.instancePath}${pointer([Math.min(i, j)])}; array items must be unique`
+	}
 	if (error.keyword === "enum" && Array.isArray(error.params.allowedValues))
 		return `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
 	if (error.keyword === "const" && Object.hasOwn(error.params, "allowedValue"))
@@ -73,6 +78,12 @@ function validationDiagnostic(
 	error: ErrorObject,
 ): Diagnostic {
 	let jsonPointer = error.instancePath
+	if (
+		error.keyword === "uniqueItems" &&
+		Number.isInteger(error.params.i) &&
+		Number.isInteger(error.params.j)
+	)
+		jsonPointer += pointer([Math.max(error.params.i, error.params.j)])
 	const property: unknown =
 		error.params.additionalProperty ??
 		error.params.unevaluatedProperty ??

@@ -4,6 +4,44 @@ import { lspClient } from "./lsp-client.ts"
 import { put, setup } from "./helpers.ts"
 
 test.each([
+	["draft 7 scalar items", { type: "string" }, '["x","y","x"]', '"x"'],
+	["draft 7 structured items", {}, '[{"x":1},{"x":2},{"x":1}]', '{"x":1}'],
+	["draft 2020-12 nested arrays", {}, "[[1],[2],[1]]", "[1]"],
+] as const)(
+	"uniqueItems highlights the later duplicate and names its earlier pointer: %s",
+	async (name, items, values, duplicate) => {
+		const schema = {
+			...(name.includes("2020-12")
+				? { $schema: "https://json-schema.org/draft/2020-12/schema" }
+				: {}),
+			type: "object",
+			properties: { "a/~b": { type: "array", items, uniqueItems: true } },
+		}
+		const text = `{"a/~b":${values}}`
+		const { core, readable, report } = await sharedResult(schema, text)
+		expect(core.diagnostics).toHaveLength(1)
+		const d = core.diagnostics[0]!
+		expect(d).toMatchObject({
+			code: "schema/uniqueItems",
+			pointer: "/a~1~0b/2",
+			message:
+				"/a~1~0b/2: duplicates item at /a~1~0b/0; array items must be unique",
+		})
+		expect(text.slice(d.offset, d.offset + d.length)).toBe(duplicate)
+		expect(d.offset).toBe(text.lastIndexOf(duplicate))
+		expect(readable).toContain(d.message)
+		expect(report.exitCode).toBe(1)
+	},
+)
+
+test("unique array items still validate without a diagnostic", async () => {
+	const { engine, file } = await setup({ type: "array", uniqueItems: true })
+	expect(
+		(await engine.validate(file, '[1,"1",{"x":1},{"x":2}]')).diagnostics,
+	).toEqual([])
+})
+
+test.each([
 	["false", "/choice: must match exactly one alternative; none matched"],
 	[
 		"5",
