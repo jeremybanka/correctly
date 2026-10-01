@@ -3,6 +3,48 @@ import { check, readableReport } from "../../src/cli/check.ts"
 import { lspClient } from "./lsp-client.ts"
 import { put, setup } from "./helpers.ts"
 
+test.each([
+	{ pattern: "^[a-z]+$" },
+	{ enum: ["lowercase"] },
+	{ const: "lowercase" },
+])(
+	"property-name reasons highlight the escaped key, not its object or value: %j",
+	async (propertyNames) => {
+		const text = '{\r\n  "labels": {\r\n    "A/~B": 42\r\n  }\r\n}'
+		const { core, readable } = await sharedResult(
+			{
+				type: "object",
+				properties: { labels: { type: "object", propertyNames } },
+			},
+			text,
+		)
+		expect(core.diagnostics).toHaveLength(2)
+		for (const d of core.diagnostics) {
+			expect(d.pointer).toBe("/labels/A~1~0B")
+			expect(d.range).toEqual({
+				start: { line: 2, character: 4 },
+				end: { line: 2, character: 10 },
+			})
+			expect(text.slice(d.offset, d.offset + d.length)).toBe('"A/~B"')
+		}
+		expect(readable).toContain('3 │     "A/~B": 42')
+	},
+)
+
+test("an empty property name still targets its key", async () => {
+	const { engine, file } = await setup({
+		type: "object",
+		propertyNames: { minLength: 1 },
+	})
+	const text = '{"": 7}'
+	const result = await engine.validate(file, text)
+	expect(result.failures).toEqual([])
+	for (const d of result.diagnostics) {
+		expect(d.pointer).toBe("/")
+		expect(text.slice(d.offset, d.offset + d.length)).toBe('""')
+	}
+})
+
 async function sharedResult(
 	schema: unknown,
 	text: string,

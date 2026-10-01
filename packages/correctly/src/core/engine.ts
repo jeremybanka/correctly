@@ -63,17 +63,24 @@ function validationDiagnostic(
 		error.params.additionalProperty ??
 		error.params.unevaluatedProperty ??
 		error.params.missingProperty ??
-		error.params.propertyName
+		error.params.propertyName ??
+		error.propertyName
 	if (typeof property === "string") jsonPointer += pointer([property])
 	const node = parsed.locate(
 		jsonPointer,
 		error.keyword === "additionalProperties" ||
 			error.keyword === "unevaluatedProperties" ||
-			error.keyword === "propertyNames",
+			error.keyword === "propertyNames" ||
+			typeof error.propertyName === "string",
 	)
 	const rangeNode =
-		error.keyword === "required" ? parsed.locate(error.instancePath) : node
-	const length = error.keyword === "required" ? 1 : rangeNode?.length
+		error.keyword === "required" && error.propertyName === undefined
+			? parsed.locate(error.instancePath)
+			: node
+	const length =
+		error.keyword === "required" && error.propertyName === undefined
+			? 1
+			: rangeNode?.length
 	const message =
 		error.keyword === "enum" && Array.isArray(error.params.allowedValues)
 			? `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
