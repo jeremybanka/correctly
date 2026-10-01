@@ -1,0 +1,56 @@
+{
+	"name": "correctly",
+	"version": "0.0.1",
+	"description": "Shared JSON Schema validation for CI and editors",
+	"license": "MPL-2.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/core.d.mts",
+			"import": "./dist/core.mjs"
+		},
+		"./config.schema.json": "./src/core/config.schema.json"
+	},
+	"bin": {
+		"correctly": "./dist/cli.mjs",
+		"correctly-lsp": "./dist/lsp.mjs"
+	},
+	"files": [
+		"dist",
+		"src",
+		"docs",
+		"LICENSE",
+		"README.md",
+		"AGENTS.md",
+		"examples"
+	],
+	"scripts": {
+		"build": "vp pack",
+		"build:vsix": "node src/cli/vsix.ts",
+		"test": "vp test",
+		"test:public": "vp test tests/public",
+		"test:private": "vp test tests/private",
+		"test:watch": "vp test watch"
+	},
+	"dependencies": {
+		"ajv": "8.20.0",
+		"ajv-formats": "3.0.1",
+		"jsonc-parser": "3.3.1",
+		"picomatch": "4.0.7",
+		"tinyglobby": "0.2.17",
+		"vscode-json-languageservice": "5.7.2",
+		"vscode-languageserver": "10.1.2",
+		"vscode-languageserver-textdocument": "1.0.15"
+	},
+	"devDependencies": {
+		"@types/node": "26.6.3",
+		"@types/picomatch": "^4.0.2",
+		"@types/vscode": "^1.100.0",
+		"@vscode/vsce": "4.0.0",
+		"rolldown": "1.2.11",
+		"vscode-languageclient": "10.1.2"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	}
+}

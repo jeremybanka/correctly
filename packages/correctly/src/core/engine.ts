@@ -1,0 +1,204 @@
+import {
+	Ajv,
+	type ErrorObject,
+	type ValidateFunction,
+	type SchemaObject,
+} from "ajv"
+import { Ajv2020 } from "ajv/dist/2020.js"
+import addFormats from "ajv-formats"
+import {
+	associationFor,
+	isIncluded,
+	modeFor,
+	schemaUri,
+	type Project,
+} from "./config.ts"
+import {
+	diagnostic,
+	parseDocument,
+	pointer,
+	type ParsedDocument,
+} from "./parse.ts"
+import { DIALECTS, SchemaStore, type StoreOptions } from "./schemas.ts"
+import {
+	CorrectlyError,
+	failure,
+	type Diagnostic,
+	type FileResult,
+} from "./types.ts"
+
+const ANNOTATIONS = [
+	"markdownDescription",
+	"enumDescriptions",
+	"markdownEnumDescriptions",
+	"defaultSnippets",
+	"errorMessage",
+	"patternErrorMessage",
+	"deprecationMessage",
+	"suggestSortText",
+	"doNotSuggest",
+	"allowComments",
+	"allowTrailingCommas",
+	"deprecated",
+	"$vocabulary",
+]
+
+function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
+	if (typeof schema !== "object" || schema === null) return
+	const object = schema as SchemaObject
+	for (const anchor of [object.$anchor, object.$dynamicAnchor]) {
+		if (typeof anchor === "string")
+			ajv.refs[new URL(`#${anchor}`, object.$id ?? uri).href] =
+				object.$id ?? uri
+	}
+}
+
+function validationDiagnostic(
+	text: string,
+	parsed: ParsedDocument,
+	error: ErrorObject,
+): Diagnostic {
+	let jsonPointer = error.instancePath
+	const property: unknown =
+		error.params.additionalProperty ??
+		error.params.unevaluatedProperty ??
+		error.params.missingProperty ??
+		error.params.propertyName
+	if (typeof property === "string") jsonPointer += pointer([property])
+	const node = parsed.locate(
+		jsonPointer,
+		error.keyword === "additionalProperties" ||
+			error.keyword === "unevaluatedProperties" ||
+			error.keyword === "propertyNames",
+	)
+	const rangeNode =
+		error.keyword === "required" ? parsed.locate(error.instancePath) : node
+	const length = error.keyword === "required" ? 1 : rangeNode?.length
+	return diagnostic(
+		text,
+		`schema/${error.keyword}`,
+		`${jsonPointer || "/"}: ${error.message ?? "Schema violation"}`,
+		jsonPointer,
+		rangeNode?.offset ?? 0,
+		length ?? 1,
+	)
+}
+
+export class Engine {
+	readonly project: Project
+	readonly store: SchemaStore
+	private readonly compiled = new Map<string, Promise<ValidateFunction>>()
+	constructor(project: Project, options: StoreOptions = {}) {
+		this.project = project
+		this.store = new SchemaStore(project, options)
+	}
+
+	validator(uri: string): Promise<ValidateFunction> {
+		let compiled = this.compiled.get(uri)
+		if (!compiled) {
+			compiled = this.compile(uri)
+			this.compiled.set(uri, compiled)
+		}
+		return compiled
+	}
+
+	private async compile(uri: string): Promise<ValidateFunction> {
+		try {
+			const resource = await this.store.load(uri)
+			const options = {
+				allErrors: true,
+				strictSchema: true,
+				strictTypes: false,
+				strictTuples: false,
+				strictRequired: false,
+				coerceTypes: false,
+				useDefaults: false,
+				removeAdditional: false,
+				validateSchema: true,
+				loadSchema: async (ref: string) => {
+					const loaded = await this.store.load(ref, resource.dialect)
+					if (loaded.dialect !== resource.dialect)
+						throw new CorrectlyError(
+							"unsupported-dialect",
+							`Mixed schema dialects: ${uri} references ${ref}`,
+						)
+					registerRootAnchors(ajv, loaded.schema, loaded.uri)
+					return loaded.schema as SchemaObject
+				},
+			}
+			const ajv =
+				resource.dialect === "2020-12" ? new Ajv2020(options) : new Ajv(options)
+			// CommonJS package exports retain a callable default at runtime.
+			const formats = addFormats as unknown as (instance: Ajv) => void
+			formats(ajv)
+			for (const keyword of ANNOTATIONS)
+				if (!ajv.RULES.keywords[keyword])
+					ajv.addKeyword({ keyword, valid: true })
+			// Ajv indexes plain anchors during reference resolution, but does not
+			// register the annotation keyword in its strict vocabulary.
+			if (resource.dialect === "2020-12")
+				ajv.addKeyword({
+					keyword: "$anchor",
+					schemaType: "string",
+					valid: true,
+				})
+			ajv.addSchema(resource.schema, resource.uri)
+			registerRootAnchors(ajv, resource.schema, resource.uri)
+			const validate = await ajv.compileAsync({
+				$schema: DIALECTS[resource.dialect],
+				$ref: uri,
+			})
+			return validate as ValidateFunction
+		} catch (error) {
+			if (error instanceof CorrectlyError) throw error
+			throw new CorrectlyError(
+				"schema",
+				`Cannot compile schema ${uri}: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
+	async prepare(): Promise<void> {
+		// Register configured resources before compiling references to their IDs.
+		for (const association of this.project.config.associations) {
+			if (association.schema !== null)
+				await this.store.load(schemaUri(association.schema, this.project.root))
+		}
+		for (const association of this.project.config.associations) {
+			if (association.schema !== null)
+				await this.validator(schemaUri(association.schema, this.project.root))
+		}
+	}
+
+	async validate(file: string, text: string): Promise<FileResult> {
+		const association = associationFor(this.project, file)
+		const mode = association?.mode ?? modeFor(file)
+		const result: FileResult = {
+			file,
+			mode,
+			association,
+			coverage: "excluded",
+			diagnostics: [],
+			failures: [],
+		}
+		if (!isIncluded(this.project, file)) return result
+		result.coverage = association?.schema ? "schema" : "syntax-only"
+		const parsed = parseDocument(text, mode)
+		result.diagnostics.push(...parsed.diagnostics)
+		if (association?.schema) {
+			try {
+				const validate = await this.validator(association.schema)
+				if (parsed.diagnostics.length === 0 && !validate(parsed.value)) {
+					result.diagnostics.push(
+						...(validate.errors ?? []).map((e) =>
+							validationDiagnostic(text, parsed, e),
+						),
+					)
+				}
+			} catch (error) {
+				result.failures.push(failure(error, file))
+			}
+		}
+		return result
+	}
+}

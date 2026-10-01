@@ -1,0 +1,40 @@
+packages:
+  - packages/*
+
+allowBuilds:
+  "@vscode/vsce-sign": false
+  dprint: true
+  keytar: false
+
+blockExoticSubdeps: true
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - agents.yaml
+  - atom.io
+  - break-check
+  - comline
+  - takua
+  - treetrunks
+  - vite-plus
+  - "@voidzero-dev/*"
+  - oxlint
+  - "@oxlint/*"
+  - oxlint-tsgolint
+  - "@oxlint-tsgolint/*"
+  - oxfmt
+  - "@oxfmt/*"
+  - vitest
+  - "@vitest/*"
+verifyDepsBeforeRun: error
+
+peerDependencyRules:
+  allowAny:
+    - vite
+  allowedVersions:
+    typescript: ^5.0.0 || ^6.0.0 || ^7.0.0
+    vite: "*"
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.0.0
+  vite-plus: 1.0.0
+overrides:
+  vite@*: "catalog:"

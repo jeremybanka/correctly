@@ -1,0 +1,5 @@
+{
+	// Comments and trailing commas are allowed in JSONC mode.
+	"name": "Correctly",
+	"color": "red",
+}

@@ -1,0 +1,24 @@
+{
+	"name": "correctly-vscode",
+	"displayName": "Correctly",
+	"version": "0.0.1",
+	"private": true,
+	"description": "JSON Schema validation and editor hints from one external configuration",
+	"categories": ["Linters", "Programming Languages"],
+	"license": "MPL-2.0",
+	"publisher": "jeremybanka",
+	"type": "module",
+	"main": "./dist/extension.mjs",
+	"files": ["dist", "README.md", "LICENSE"],
+	"contributes": {
+		"commands": [
+			{
+				"command": "correctly.restartServer",
+				"title": "Correctly: Restart Server"
+			}
+		]
+	},
+	"activationEvents": ["onLanguage:json", "onLanguage:jsonc"],
+	"engines": { "vscode": "^1.100.0" },
+	"extensionKind": ["workspace"]
+}

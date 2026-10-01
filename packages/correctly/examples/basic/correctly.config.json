@@ -1,0 +1,10 @@
+{
+	"files": ["project.json", "project.jsonc"],
+	"associations": [
+		{
+			"name": "Project",
+			"files": ["project.*"],
+			"schema": "project.schema.json"
+		}
+	]
+}

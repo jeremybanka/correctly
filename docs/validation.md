@@ -1,0 +1,20 @@
+# Delivery validation
+
+The implementation has focused acceptance tests under `packages/correctly/tests/public` and distribution checks under `tests/private`. Run `pnpm test` with loopback HTTP access. Tests use fixed repository fixtures and local HTTP servers; they do not depend on the original sibling repositories or external services.
+
+| Acceptance                                         | Evidence                                                                                                                                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| One external association in CI and editor          | Live stdio LSP/CLI parity tests plus property/value completion and hover tests; example documents have no embedded schema link.                                                                  |
+| Useful consistent locations                        | Syntax, duplicate-key, schema type/enum, required and disallowed-property tests compare CLI and LSP ranges/pointers.                                                                             |
+| Local/remote references, identifiers and fragments | Draft 7 relative files, named configured resources, pointer/anchor associations, nested resources, 2020-12 dynamic references, and loopback HTTP graphs.                                         |
+| Offline and bounded requests                       | Offline reuse and misses, conditional refresh, stale-cache refusal on HTTP failure, byte/time/redirect/resource limits.                                                                          |
+| Unsupported/missing schemas                        | Unsupported drafts/required vocabularies, mixed drafts, invalid schemas/keywords, unresolved references, missing schemas and configs return visible failures.                                    |
+| Precedence and independent roots                   | Last-match-wins, explicit syntax-only coverage, config-relative paths, exclusions, nested configs, multiple roots and folder changes.                                                            |
+| Unsaved edits, refresh and stale results           | Unsaved data/schema/config tests, new unsaved configs, watched changes, outside-root schema watchers, rapid edits, delayed validation and cancellation before schema loads complete.             |
+| Real repository configurations                     | Lasertag/Wayforge/Recoverage Changesets configurations against the actual 2020-12 schema; Lasertag/agents.yaml dprint configurations against the official draft 7 schema. Invalid variants fail. |
+| Single CI command and exit codes                   | Spawned CLI tests parse pure JSON stdout and check exits 0/1/2 without filtering.                                                                                                                |
+| Installable extension                              | VSCE packages a universal VSIX; distribution tests run its staged server in an isolated directory without node_modules and check diagnostics/completion/hover.                                   |
+
+Final verification uses `pnpm fmt`, `pnpm check`, `pnpm test`, `pnpm build`, `pnpm build:vsix`, and `pnpm test:distribution`. The example CLI command validates JSON and JSONC successfully. The archive is also inspected to confirm the manifest, client and server are present.
+
+The VSIX has been packaged and its bundled stdio server exercised. Interactive extension activation in a running VS Code GUI is not automated here. Built-in VS Code JSON features remain independent and can be disabled as documented. JSON/JSONC are the supported initial formats; YAML/TOML and publishing are outside this delivery.
