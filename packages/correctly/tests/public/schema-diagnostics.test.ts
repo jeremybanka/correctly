@@ -4,6 +4,55 @@ import { lspClient } from "./lsp-client.ts"
 import { put, setup } from "./helpers.ts"
 
 test.each([
+	["false", "/choice: must match exactly one alternative; none matched"],
+	[
+		"5",
+		"/choice: must match exactly one alternative; multiple matched (alternatives 1, 2)",
+	],
+])(
+	"oneOf distinguishes no match from overlap for %s",
+	async (value, message) => {
+		const alternatives = [
+			{ type: "number", minimum: 0 },
+			{ type: "number", maximum: 10 },
+		]
+		const { core, report, readable } = await sharedResult(
+			{ type: "object", properties: { choice: { oneOf: alternatives } } },
+			`{"choice":${value}}`,
+		)
+		expect(
+			core.diagnostics.find((d) => d.code === "schema/oneOf"),
+		).toMatchObject({ pointer: "/choice", message })
+		expect(readable).toContain(message)
+		expect(report.exitCode).toBe(1)
+		const { engine, file } = await setup({ oneOf: alternatives })
+		expect((await engine.validate(file, "20")).diagnostics).toEqual([])
+	},
+)
+
+test("referenced 2020-12 oneOf reports overlap without claiming all matching alternatives were counted", async () => {
+	const { core } = await sharedResult(
+		{
+			$schema: "https://json-schema.org/draft/2020-12/schema",
+			$ref: "choice.json",
+		},
+		"5",
+		{
+			"choice.json": {
+				oneOf: [{ type: "number" }, { type: "integer" }, { minimum: 0 }],
+			},
+		},
+	)
+	expect(core.diagnostics).toMatchObject([
+		{
+			code: "schema/oneOf",
+			message:
+				"/: must match exactly one alternative; multiple matched (alternatives 1, 2)",
+		},
+	])
+})
+
+test.each([
 	{ pattern: "^[a-z]+$" },
 	{ enum: ["lowercase"] },
 	{ const: "lowercase" },

@@ -53,6 +53,20 @@ function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
 	}
 }
 
+function validationMessage(error: ErrorObject): string {
+	if (error.keyword === "enum" && Array.isArray(error.params.allowedValues))
+		return `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
+	if (error.keyword === "const" && Object.hasOwn(error.params, "allowedValue"))
+		return `must equal ${JSON.stringify(error.params.allowedValue)}`
+	if (error.keyword === "oneOf") {
+		if (error.params.passingSchemas === null)
+			return "must match exactly one alternative; none matched"
+		if (Array.isArray(error.params.passingSchemas))
+			return `must match exactly one alternative; multiple matched (alternatives ${error.params.passingSchemas.map((index: number) => index + 1).join(", ")})`
+	}
+	return error.message ?? "Schema violation"
+}
+
 function validationDiagnostic(
 	text: string,
 	parsed: ParsedDocument,
@@ -81,16 +95,10 @@ function validationDiagnostic(
 		error.keyword === "required" && error.propertyName === undefined
 			? 1
 			: rangeNode?.length
-	const message =
-		error.keyword === "enum" && Array.isArray(error.params.allowedValues)
-			? `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
-			: error.keyword === "const" && Object.hasOwn(error.params, "allowedValue")
-				? `must equal ${JSON.stringify(error.params.allowedValue)}`
-				: (error.message ?? "Schema violation")
 	return diagnostic(
 		text,
 		`schema/${error.keyword}`,
-		`${jsonPointer || "/"}: ${message}`,
+		`${jsonPointer || "/"}: ${validationMessage(error)}`,
 		jsonPointer,
 		rangeNode?.offset ?? 0,
 		length ?? 1,
