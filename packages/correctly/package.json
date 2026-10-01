@@ -1,7 +1,12 @@
 {
 	"name": "correctly",
-	"version": "0.0.1",
+	"version": "0.0.0",
 	"description": "Shared JSON Schema validation for CI and editors",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jeremybanka/correctly.git",
+		"directory": "packages/correctly"
+	},
 	"license": "MPL-2.0",
 	"type": "module",
 	"exports": {
@@ -44,8 +49,8 @@
 	},
 	"devDependencies": {
 		"@types/node": "26.6.3",
-		"@types/picomatch": "^4.0.2",
-		"@types/vscode": "^1.100.0",
+		"@types/picomatch": "4.0.3",
+		"@types/vscode": "1.138.0",
 		"@vscode/vsce": "4.0.0",
 		"rolldown": "1.2.11",
 		"vscode-languageclient": "10.1.2"

@@ -1,15 +1,27 @@
 {
 	"name": "correctly-vscode",
 	"displayName": "Correctly",
-	"version": "0.0.1",
+	"version": "0.0.0",
 	"private": true,
 	"description": "JSON Schema validation and editor hints from one external configuration",
-	"categories": ["Linters", "Programming Languages"],
+	"categories": [
+		"Linters",
+		"Programming Languages"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jeremybanka/correctly.git",
+		"directory": "packages/correctly/src/vscode"
+	},
 	"license": "MPL-2.0",
 	"publisher": "jeremybanka",
 	"type": "module",
 	"main": "./dist/extension.mjs",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"contributes": {
 		"commands": [
 			{
@@ -18,7 +30,14 @@
 			}
 		]
 	},
-	"activationEvents": ["onLanguage:json", "onLanguage:jsonc"],
-	"engines": { "vscode": "^1.100.0" },
-	"extensionKind": ["workspace"]
+	"activationEvents": [
+		"onLanguage:json",
+		"onLanguage:jsonc"
+	],
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"extensionKind": [
+		"workspace"
+	]
 }

@@ -97,7 +97,7 @@ Readable reports use terminal colors automatically: bold file names, red error c
 
 ## Editor installation and shared APIs
 
-From the repository, run `pnpm build:vsix`, then `code --install-extension artifacts/Correctly-0.0.1.vsix`. The universal VSIX bundles the client and server and needs no npm dependencies on the editor machine. Open a workspace with a configuration to activate JSON/JSONC support. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
+From the repository, run `pnpm build:vsix`, then `code --install-extension artifacts/Correctly-0.0.0.vsix`. The universal VSIX bundles the client and server and needs no npm dependencies on the editor machine. Open a workspace with a configuration to activate JSON/JSONC support. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
 
 Microsoft's JSON language service supplies completions and hover. Its AST is retained with traversal methods bound to the original document; a selection view disables automatic embedded `$schema` selection. Ajv remains the validation authority. Built-in VS Code JSON features may independently provide suggestions/diagnostics; set `json.validate.enable` to `false` to use only Correctly validation, if desired.
 

@@ -22,7 +22,7 @@ describe.runIf(
 			await readFile(path.join(isolated, "extension/package.json"), "utf8"),
 		) as { main: string; version: string }
 		expect(manifest.main).toBe("./dist/extension.mjs")
-		expect(manifest.version).toBe("0.0.1")
+		expect(manifest.version).toBe("0.0.0")
 		expect(existsSync(path.join(isolated, "extension/node_modules"))).toBe(
 			false,
 		)

@@ -10,7 +10,7 @@ pnpm check
 pnpm build:vsix
 ```
 
-The installable extension is `artifacts/Correctly-0.0.1.vsix`. Install it with `code --install-extension artifacts/Correctly-0.0.1.vsix`. Packages and extensions have not been published.
+The installable extension is `artifacts/Correctly-0.0.0.vsix`. Install it with `code --install-extension artifacts/Correctly-0.0.0.vsix`. Packages and extensions have not been published.
 
 Try the complete example:
 

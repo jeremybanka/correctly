@@ -240,10 +240,10 @@ importers:
         specifier: 26.6.3
         version: 26.6.3
       '@types/picomatch':
-        specifier: ^4.0.2
+        specifier: 4.0.3
         version: 4.0.3
       '@types/vscode':
-        specifier: ^1.100.0
+        specifier: 1.138.0
         version: 1.138.0
       '@vscode/vsce':
         specifier: 4.0.0

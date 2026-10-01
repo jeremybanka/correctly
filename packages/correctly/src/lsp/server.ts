@@ -99,7 +99,7 @@ export function startServer() {
 					workspaceFolders: { supported: true, changeNotifications: true },
 				},
 			},
-			serverInfo: { name: "correctly", version: "0.0.1" },
+			serverInfo: { name: "correctly", version: "0.0.0" },
 		}
 	})
 	connection.onInitialized(() => {
