@@ -77,7 +77,9 @@ function validationDiagnostic(
 	const message =
 		error.keyword === "enum" && Array.isArray(error.params.allowedValues)
 			? `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
-			: (error.message ?? "Schema violation")
+			: error.keyword === "const" && Object.hasOwn(error.params, "allowedValue")
+				? `must equal ${JSON.stringify(error.params.allowedValue)}`
+				: (error.message ?? "Schema violation")
 	return diagnostic(
 		text,
 		`schema/${error.keyword}`,
