@@ -8,6 +8,7 @@ export type Diagnostic = {
 	offset: number
 	length: number
 	range: Range
+	context?: { parent: number; label: string }
 }
 export type Failure = { code: string; message: string; file?: string }
 export class CorrectlyError extends Error {

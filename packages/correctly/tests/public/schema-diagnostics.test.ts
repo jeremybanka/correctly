@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test"
 import { check, readableReport } from "../../src/cli/check.ts"
+import { diagnosticViews } from "../../src/core/diagnostics.ts"
 import { lspClient } from "./lsp-client.ts"
 import { put, setup } from "./helpers.ts"
 
@@ -162,7 +163,7 @@ async function sharedResult(
 			pointer: (d.data as { pointer: string }).pointer,
 		})),
 	).toEqual(
-		core.diagnostics.map((d) => ({
+		diagnosticViews(core.diagnostics).map((d) => ({
 			code: d.code,
 			message: d.message,
 			range: d.range,

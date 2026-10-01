@@ -20,6 +20,7 @@ import {
 	type ParsedDocument,
 } from "./parse.ts"
 import { DIALECTS, SchemaStore, type StoreOptions } from "./schemas.ts"
+import { validationContexts } from "./diagnostics.ts"
 import {
 	CorrectlyError,
 	failure,
@@ -54,6 +55,13 @@ function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
 }
 
 function validationMessage(error: ErrorObject): string {
+	if (error.keyword === "anyOf")
+		return "must match at least one alternative; none matched"
+	if (
+		error.keyword === "if" &&
+		["then", "else"].includes(error.params.failingKeyword as string)
+	)
+		return `must satisfy the ${error.params.failingKeyword} branch of the conditional schema`
 	if (error.keyword === "uniqueItems") {
 		const { i, j } = error.params
 		if (Number.isInteger(i) && Number.isInteger(j))
@@ -222,8 +230,11 @@ export class Engine {
 				const validate = await this.validator(association.schema)
 				if (parsed.diagnostics.length === 0 && !validate(parsed.value)) {
 					result.diagnostics.push(
-						...(validate.errors ?? []).map((e) =>
-							validationDiagnostic(text, parsed, e),
+						...validationContexts(
+							validate.errors ?? [],
+							(validate.errors ?? []).map((e) =>
+								validationDiagnostic(text, parsed, e),
+							),
 						),
 					)
 				}

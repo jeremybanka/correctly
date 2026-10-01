@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { cp, readFile } from "node:fs/promises"
 import { spawnSync } from "node:child_process"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { describe, expect, test } from "vite-plus/test"
 import type { CompletionList, Hover } from "vscode-languageserver/node"
 import { setup, temp, put } from "../public/helpers.ts"
@@ -50,6 +50,27 @@ describe.runIf(
 				}),
 			),
 		).toContain("The project name")
+		await put(root, "schema.json", {
+			anyOf: [{ type: "string" }, { type: "number" }],
+		})
+		await client.connection.sendNotification(
+			"workspace/didChangeWatchedFiles",
+			{
+				changes: [
+					{ uri: pathToFileURL(path.join(root, "schema.json")).href, type: 2 },
+				],
+			},
+		)
+		await client.change(uri, "false", 3)
+		const updated = await client.wait(uri, 3)
+		expect(updated.diagnostics).toHaveLength(1)
+		expect(updated.diagnostics[0]?.code).toBe("schema/anyOf")
+		expect(
+			updated.diagnostics[0]?.relatedInformation?.map((d) => d.message),
+		).toEqual([
+			"Alternative 1: /: must be string",
+			"Alternative 2: /: must be number",
+		])
 	})
 	test("built CLI runs and emits a pure JSON report", async () => {
 		const { root } = await setup()
@@ -65,5 +86,33 @@ describe.runIf(
 			reportVersion: 1,
 			summary: { checked: 1, schemaCovered: 1 },
 		})
+		await put(root, "schema.json", {
+			anyOf: [{ type: "string" }, { type: "number" }],
+		})
+		await put(root, "data/test.json", "false")
+		const json = spawnSync(
+			process.execPath,
+			[path.join(packageRoot, "dist/cli.mjs"), "check", "--format=json"],
+			{ cwd: root, encoding: "utf8" },
+		)
+		expect(json.status).toBe(1)
+		expect(JSON.parse(json.stdout).files[0].diagnostics).toMatchObject([
+			{ code: "schema/type", context: { parent: 2, label: "Alternative 1" } },
+			{ code: "schema/type", context: { parent: 2, label: "Alternative 2" } },
+			{ code: "schema/anyOf" },
+		])
+		const readable = spawnSync(
+			process.execPath,
+			[path.join(packageRoot, "dist/cli.mjs"), "check"],
+			{
+				cwd: root,
+				encoding: "utf8",
+				env: { ...process.env, FORCE_COLOR: "0" },
+			},
+		)
+		expect(readable.status).toBe(1)
+		expect(readable.stdout).toContain("data/test.json  1 error")
+		expect(readable.stdout).toContain("Alternative 1")
+		expect(readable.stdout).toContain("Alternative 2")
 	})
 })

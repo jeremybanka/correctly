@@ -15,9 +15,10 @@ import { Workspace } from "./workspace.ts"
 import { Hints } from "./hints.ts"
 import type { FileResult } from "../core/types.ts"
 import { diagnostic } from "../core/parse.ts"
+import { diagnosticViews, diagnosticDetails } from "../core/diagnostics.ts"
 
 export function lspDiagnostics(result: FileResult, text: string) {
-	return [
+	return diagnosticViews([
 		...result.diagnostics,
 		...result.failures
 			.filter(
@@ -27,13 +28,26 @@ export function lspDiagnostics(result: FileResult, text: string) {
 					),
 			)
 			.map((f) => diagnostic(text, f.code, f.message)),
-	].map((d) => ({
+	]).map((d) => ({
 		range: d.range,
 		message: d.message,
 		code: d.code,
 		severity: 1 as const,
 		source: "correctly",
 		data: { pointer: d.pointer },
+		...(d.branches.length
+			? {
+					relatedInformation: diagnosticDetails(d).map(
+						({ label, diagnostic }) => ({
+							location: {
+								uri: pathToFileURL(result.file).href,
+								range: diagnostic.range,
+							},
+							message: `${label}: ${diagnostic.message}`,
+						}),
+					),
+				}
+			: {}),
 	}))
 }
 

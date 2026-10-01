@@ -2,6 +2,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { styleText } from "node:util"
 import type { Diagnostic, Failure, FileResult, Report } from "../core/types.ts"
+import { diagnosticViews, type DiagnosticView } from "../core/diagnostics.ts"
 
 export type ReadableOptions = {
 	cwd?: string
@@ -117,13 +118,63 @@ function excerpt(
 }
 
 type FileGroup = { file: string; result?: FileResult; failures: Failure[] }
+
+function renderDiagnostic(
+	issue: DiagnosticView,
+	prefix: string,
+	last: boolean,
+	source: string[] | undefined,
+	diagnosedLines: ReadonlySet<number>,
+	styler: Styler,
+	shownRegions = new Set<string>(),
+): string[] {
+	const branch = last ? "└─" : "├─"
+	const continuation = `${prefix}${last ? "   " : "│  "}`
+	const output = [
+		`${styler.dim(`${prefix}${branch}`)} ${styler.dim(`${issue.range.start.line + 1}:${issue.range.start.character + 1}`)}  ${styler.code(issue.code)}`,
+	]
+	const region = source
+		? excerpt(source, issue, diagnosedLines, styler)
+		: undefined
+	const regionKey = `${issue.offset}:${issue.length}`
+	if (region && !shownRegions.has(regionKey))
+		output.push(
+			...region.lines.map((line) => `${styler.dim(continuation)}${line}`),
+		)
+	shownRegions.add(regionKey)
+	const indentation = `${continuation}${" ".repeat(region ? region.width + 1 : 0)}`
+	output.push(
+		`${styler.dim(continuation)}${" ".repeat(region ? region.width + 1 : 0)}${styler.dim("╰─")} ${issue.message}`,
+	)
+	for (const [index, branch] of issue.branches.entries()) {
+		const finalBranch = index === issue.branches.length - 1
+		output.push(
+			`${styler.dim(`${indentation}${finalBranch ? "└─" : "├─"}`)} ${styler.bold(branch.label)}`,
+		)
+		const children = branch.diagnostics.toSorted((a, b) => a.offset - b.offset)
+		for (const [childIndex, child] of children.entries())
+			output.push(
+				...renderDiagnostic(
+					child,
+					`${indentation}${finalBranch ? "   " : "│  "}`,
+					childIndex === children.length - 1,
+					source,
+					diagnosedLines,
+					styler,
+					shownRegions,
+				),
+			)
+	}
+	return output
+}
+
 function fileSection(
 	group: FileGroup,
 	options: ReadableOptions,
 	styler: Styler,
 ): string {
 	const cwd = options.cwd ?? process.cwd()
-	const diagnostics = (group.result?.diagnostics ?? []).toSorted(
+	const diagnostics = diagnosticViews(group.result?.diagnostics ?? []).toSorted(
 		(a, b) => a.offset - b.offset,
 	)
 	const counts = [
@@ -158,7 +209,7 @@ function fileSection(
 	const source = text === undefined ? undefined : text.split(/\r\n|\r|\n/)
 	const diagnosedLines = new Set<number>()
 	if (source)
-		for (const diagnostic of diagnostics) {
+		for (const diagnostic of group.result?.diagnostics ?? []) {
 			for (
 				let line = diagnostic.range.start.line;
 				line <= Math.min(lastSelectedLine(diagnostic), source.length - 1);
@@ -166,24 +217,16 @@ function fileSection(
 			)
 				diagnosedLines.add(line)
 		}
-	const issues: (Diagnostic | Failure)[] = [...diagnostics, ...group.failures]
+	const issues: (DiagnosticView | Failure)[] = [
+		...diagnostics,
+		...group.failures,
+	]
 	for (const [index, issue] of issues.entries()) {
 		const last = index === issues.length - 1
 		const branch = last ? "└─" : "├─"
-		const continuation = last ? "   " : "│  "
 		if ("range" in issue) {
 			output.push(
-				`${styler.dim(branch)} ${styler.dim(`${issue.range.start.line + 1}:${issue.range.start.character + 1}`)}  ${styler.code(issue.code)}`,
-			)
-			const region = source
-				? excerpt(source, issue, diagnosedLines, styler)
-				: undefined
-			if (region)
-				output.push(
-					...region.lines.map((line) => `${styler.dim(continuation)}${line}`),
-				)
-			output.push(
-				`${styler.dim(continuation)}${" ".repeat(region ? region.width + 1 : 0)}${styler.dim("╰─")} ${issue.message}`,
+				...renderDiagnostic(issue, "", last, source, diagnosedLines, styler),
 			)
 		} else
 			output.push(
@@ -225,7 +268,7 @@ export function readableReport(
 	for (const error of globalFailures)
 		output.push(`${styler.bad(error.code)}: ${error.message}`)
 	const errors = report.files.reduce(
-		(count, file) => count + file.diagnostics.length,
+		(count, file) => count + diagnosticViews(file.diagnostics).length,
 		0,
 	)
 	const s = report.summary
