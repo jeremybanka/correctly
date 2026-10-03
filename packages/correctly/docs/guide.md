@@ -51,7 +51,9 @@ Document `$schema` is always ordinary data. It is neither removed nor used to se
 
 Ajv provides authoritative validation in both CLI and LSP. Separate instances support draft 7 and draft 2020-12, including prefixItems, unevaluatedProperties, and dynamic references. Root schemas without `$schema` default to draft 7; referenced resources without one inherit the referencing dialect. Unknown dialects, mixed-dialect graphs, unsupported required vocabularies, unresolved references, invalid schemas, and unknown validation keywords fail visibly. Standard 2020-12 core/applicator/unevaluated/validation/metadata/format-annotation/content vocabularies are recognized. Required format-assertion vocabulary and custom required vocabularies are not supported. ajv-formats applies its supported format checks in both drafts; unknown formats fail compilation. Content decoding/validation is not performed. `$async` is unsupported.
 
-Descriptive Microsoft schema extensions, such as `markdownDescription`, `enumDescriptions`, and `defaultSnippets`, are treated as annotations. No values are coerced, no defaults are inserted, and no properties are removed. Formatting is outside validation.
+Numeric formats used by Turbo and Oxlint are also checked: `uint8`, `uint32`, and `uint64` require nonnegative integers below 2⁸, 2³², and 2⁶⁴ respectively; `uint` requires a nonnegative integer without a platform-specific upper bound; `double` requires a finite number. Explicit schema bounds still apply. These checks use parsed JavaScript numbers and do not extend JSON integer precision.
+
+Descriptive Microsoft schema extensions, such as `markdownDescription`, `enumDescriptions`, and `defaultSnippets`, and Renovate's `x-renovate-version` metadata are treated as annotations. No values are coerced, no defaults are inserted, and no properties are removed. Formatting is outside validation.
 
 ## References and cache
 

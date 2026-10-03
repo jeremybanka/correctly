@@ -21,6 +21,7 @@ import {
 } from "./parse.ts"
 import { DIALECTS, SchemaStore, type StoreOptions } from "./schemas.ts"
 import { validationContexts } from "./diagnostics.ts"
+import { addNumericFormats } from "./formats.ts"
 import {
 	CorrectlyError,
 	failure,
@@ -42,6 +43,7 @@ const ANNOTATIONS = [
 	"allowTrailingCommas",
 	"deprecated",
 	"$vocabulary",
+	"x-renovate-version",
 ]
 
 function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
@@ -171,6 +173,7 @@ export class Engine {
 			// CommonJS package exports retain a callable default at runtime.
 			const formats = addFormats as unknown as (instance: Ajv) => void
 			formats(ajv)
+			addNumericFormats(ajv)
 			for (const keyword of ANNOTATIONS)
 				if (!ajv.RULES.keywords[keyword])
 					ajv.addKeyword({ keyword, valid: true })
