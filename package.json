@@ -16,7 +16,8 @@
 		"release:publish": "pnpm build && changeset publish",
 		"release:version": "changeset version",
 		"check:correctly": "node packages/correctly/src/cli/main.ts check",
-		"test:distribution": "pnpm --filter correctly exec vp test tests/private/distribution.test.ts"
+		"test:distribution": "pnpm --filter correctly exec vp test tests/private/distribution.test.ts",
+		"test:schemars": "node scripts/check-schemars.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

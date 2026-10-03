@@ -21,7 +21,13 @@ import {
 } from "./parse.ts"
 import { DIALECTS, SchemaStore, type StoreOptions } from "./schemas.ts"
 import { validationContexts } from "./diagnostics.ts"
-import { addNumericFormats } from "./formats.ts"
+import {
+	builtinExtensions,
+	extensionKey,
+	installExtensions,
+	assertFormats,
+	type SchemaExtension,
+} from "./extensions.ts"
 import {
 	CorrectlyError,
 	failure,
@@ -43,7 +49,6 @@ const ANNOTATIONS = [
 	"allowTrailingCommas",
 	"deprecated",
 	"$vocabulary",
-	"x-renovate-version",
 ]
 
 function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
@@ -126,25 +131,39 @@ function validationDiagnostic(
 	)
 }
 
+export type EngineOptions = StoreOptions & {
+	extensions?: readonly SchemaExtension[]
+}
+
 export class Engine {
 	readonly project: Project
 	readonly store: SchemaStore
 	private readonly compiled = new Map<string, Promise<ValidateFunction>>()
-	constructor(project: Project, options: StoreOptions = {}) {
+	private readonly extensions: readonly SchemaExtension[]
+	constructor(project: Project, options: EngineOptions = {}) {
 		this.project = project
+		this.extensions = [...builtinExtensions, ...(options.extensions ?? [])]
 		this.store = new SchemaStore(project, options)
 	}
 
-	validator(uri: string): Promise<ValidateFunction> {
-		let compiled = this.compiled.get(uri)
+	validator(
+		uri: string,
+		extensions: readonly string[] = [],
+	): Promise<ValidateFunction> {
+		const selected = [...new Set(extensions)].sort()
+		const key = extensionKey(uri, selected)
+		let compiled = this.compiled.get(key)
 		if (!compiled) {
-			compiled = this.compile(uri)
-			this.compiled.set(uri, compiled)
+			compiled = this.compile(uri, selected)
+			this.compiled.set(key, compiled)
 		}
 		return compiled
 	}
 
-	private async compile(uri: string): Promise<ValidateFunction> {
+	private async compile(
+		uri: string,
+		extensions: readonly string[],
+	): Promise<ValidateFunction> {
 		try {
 			const resource = await this.store.load(uri)
 			const options = {
@@ -164,6 +183,13 @@ export class Engine {
 							"unsupported-dialect",
 							`Mixed schema dialects: ${uri} references ${ref}`,
 						)
+					assertFormats(
+						ajv,
+						loaded.schema,
+						loaded.uri,
+						this.extensions,
+						loaded.pointer,
+					)
 					registerRootAnchors(ajv, loaded.schema, loaded.uri)
 					return loaded.schema as SchemaObject
 				},
@@ -173,7 +199,10 @@ export class Engine {
 			// CommonJS package exports retain a callable default at runtime.
 			const formats = addFormats as unknown as (instance: Ajv) => void
 			formats(ajv)
-			addNumericFormats(ajv)
+			// ajv-formats also ships OpenAPI numeric names. Their width semantics
+			// belong to an explicitly selected extension, not the baseline.
+			for (const name of ["int32", "int64", "float", "double"])
+				delete ajv.formats[name]
 			for (const keyword of ANNOTATIONS)
 				if (!ajv.RULES.keywords[keyword])
 					ajv.addKeyword({ keyword, valid: true })
@@ -185,6 +214,14 @@ export class Engine {
 					schemaType: "string",
 					valid: true,
 				})
+			installExtensions(ajv, extensions, this.extensions)
+			assertFormats(
+				ajv,
+				resource.schema,
+				resource.uri,
+				this.extensions,
+				resource.pointer,
+			)
 			ajv.addSchema(resource.schema, resource.uri)
 			registerRootAnchors(ajv, resource.schema, resource.uri)
 			const validate = await ajv.compileAsync({
@@ -209,7 +246,10 @@ export class Engine {
 		}
 		for (const association of this.project.config.associations) {
 			if (association.schema !== null)
-				await this.validator(schemaUri(association.schema, this.project.root))
+				await this.validator(
+					schemaUri(association.schema, this.project.root),
+					association.extensions,
+				)
 		}
 	}
 
@@ -230,7 +270,10 @@ export class Engine {
 		result.diagnostics.push(...parsed.diagnostics)
 		if (association?.schema) {
 			try {
-				const validate = await this.validator(association.schema)
+				const validate = await this.validator(
+					association.schema,
+					association.extensions,
+				)
 				if (parsed.diagnostics.length === 0 && !validate(parsed.value)) {
 					result.diagnostics.push(
 						...validationContexts(

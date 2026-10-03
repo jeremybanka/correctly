@@ -5,3 +5,4 @@ artifacts/
 .mise/
 *.log
 *.vsix
+target/

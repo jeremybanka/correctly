@@ -23,6 +23,7 @@ export type ProjectConfig = {
 		files: string[]
 		schema: string | null
 		mode?: Mode
+		extensions?: string[]
 	}[]
 	remote?: {
 		offline?: boolean
@@ -190,6 +191,7 @@ export function associationFor(
 				schema:
 					rule.schema === null ? null : schemaUri(rule.schema, project.root),
 				mode: rule.mode ?? modeFor(file),
+				...(rule.extensions ? { extensions: rule.extensions } : {}),
 			}
 		}
 	}

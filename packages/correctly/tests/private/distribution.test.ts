@@ -118,4 +118,59 @@ describe.runIf(
 		expect(readable.stdout).toContain("Alternative 1")
 		expect(readable.stdout).toContain("Alternative 2")
 	})
+	test("built CLI and isolated VSIX both ship the opt-in extension catalog", async () => {
+		const { root, uri, configPath } = await setup({
+			type: "integer",
+			format: "uint16",
+		})
+		await put(root, "data/test.json", "65536")
+		const run = () =>
+			spawnSync(
+				process.execPath,
+				[path.join(packageRoot, "dist/cli.mjs"), "check", "--format=json"],
+				{ cwd: root, encoding: "utf8" },
+			)
+		const missing = run()
+		expect(missing.status).toBe(2)
+		expect(JSON.parse(missing.stdout).failures).toMatchObject([
+			{
+				code: "extension-required",
+				details: { suggestedExtension: "schemars@0.8.22" },
+			},
+		])
+		const isolated = await temp()
+		await cp(stage, path.join(isolated, "extension"), { recursive: true })
+		const client = await lspClient(
+			[root],
+			path.join(isolated, "extension/dist/server.mjs"),
+			isolated,
+		)
+		await client.open(uri, "65536")
+		expect((await client.wait(uri, 1)).diagnostics[0]?.code).toBe(
+			"extension-required",
+		)
+		const config = {
+			files: ["data/**"],
+			associations: [
+				{
+					files: ["data/**"],
+					schema: "schema.json",
+					extensions: ["schemars@0.8.22"],
+				},
+			],
+		}
+		await put(root, "correctly.config.json", config)
+		const enabled = run()
+		expect(enabled.status).toBe(1)
+		expect(JSON.parse(enabled.stdout).files[0].diagnostics[0].code).toBe(
+			"schema/format",
+		)
+		const count = client.notifications.length
+		await client.open(pathToFileURL(configPath).href, JSON.stringify(config))
+		expect((await client.wait(uri, 1, count)).diagnostics[0]?.code).toBe(
+			"schema/format",
+		)
+		await client.change(uri, "65535", 2)
+		expect((await client.wait(uri, 2)).diagnostics).toEqual([])
+	})
 })

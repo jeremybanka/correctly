@@ -17,8 +17,22 @@
 					"name": { "type": "string", "minLength": 1 },
 					"files": { "$ref": "#/definitions/patterns" },
 					"schema": { "type": ["string", "null"], "minLength": 1 },
-					"mode": { "enum": ["json", "jsonc"] }
-				}
+					"mode": { "enum": ["json", "jsonc"] },
+					"extensions": {
+						"description": "Exact extension IDs enabled for this schema and its references.",
+						"type": "array",
+						"uniqueItems": true,
+						"items": { "type": "string", "minLength": 1 }
+					}
+				},
+				"allOf": [
+					{
+						"if": { "properties": { "schema": { "type": "null" } } },
+						"then": {
+							"properties": { "extensions": { "type": "array", "maxItems": 0 } }
+						}
+					}
+				]
 			}
 		},
 		"remote": {

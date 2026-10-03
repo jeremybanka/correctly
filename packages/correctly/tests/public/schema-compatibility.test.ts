@@ -4,73 +4,26 @@ import { check } from "../../src/cli/check.ts"
 import { put, setup } from "./helpers.ts"
 import { lspClient } from "./lsp-client.ts"
 
+function compatibility(schema: unknown) {
+	return setup(schema, {
+		files: ["data/**/*.json"],
+		associations: [
+			{
+				files: ["data/**"],
+				schema: "schema.json",
+				extensions: ["schemars@0.8.22", "renovate"],
+			},
+		],
+	})
+}
+
 const DIALECTS = [
 	"http://json-schema.org/draft-07/schema#",
 	"https://json-schema.org/draft/2020-12/schema",
 ]
 
-const UNSIGNED = [
-	{ format: "uint8", maximum: 255, overflow: 256 },
-	{ format: "uint32", maximum: 2 ** 32 - 1, overflow: 2 ** 32 },
-	{ format: "uint64", maximum: 2 ** 64 - 2048, overflow: 2 ** 64 },
-	{ format: "uint", maximum: Number.MAX_SAFE_INTEGER, overflow: undefined },
-]
-
-for (const $schema of DIALECTS) {
-	test.each(UNSIGNED)(
-		`$format accepts unsigned integers and rejects invalid values in ${$schema}`,
-		async ({ format, maximum, overflow }) => {
-			const { engine, file } = await setup({
-				$schema,
-				type: "integer",
-				format,
-			})
-			for (const value of [0, 1, maximum])
-				expect(
-					await engine.validate(file, JSON.stringify(value)),
-				).toMatchObject({
-					diagnostics: [],
-					failures: [],
-				})
-			for (const value of [
-				-1,
-				0.5,
-				...(overflow === undefined ? [] : [overflow]),
-			]) {
-				const result = await engine.validate(file, JSON.stringify(value))
-				expect(result.failures).toEqual([])
-				expect(result.diagnostics).toEqual(
-					expect.arrayContaining([
-						expect.objectContaining({ code: "schema/format" }),
-					]),
-				)
-			}
-			const string = await engine.validate(file, '"1"')
-			expect(string.failures).toEqual([])
-			expect(string.diagnostics[0]?.code).toBe("schema/type")
-		},
-	)
-	test(`double accepts finite numbers in ${$schema}`, async () => {
-		const { engine, file } = await setup({
-			$schema,
-			type: "number",
-			format: "double",
-		})
-		for (const value of [-1.5, 0, 0.5, Number.MAX_VALUE])
-			expect(await engine.validate(file, JSON.stringify(value))).toMatchObject({
-				diagnostics: [],
-				failures: [],
-			})
-		for (const source of ["1e400", "-1e400", '"0.5"']) {
-			const result = await engine.validate(file, source)
-			expect(result.failures).toEqual([])
-			expect(result.diagnostics.length).toBeGreaterThan(0)
-		}
-	})
-}
-
 test("numeric format bounds and explicit schema bounds both apply through references", async () => {
-	const { engine, file, root } = await setup({
+	const { engine, file, root } = await compatibility({
 		$ref: "limits.json#/definitions/depth",
 	})
 	await put(root, "limits.json", {
@@ -96,7 +49,7 @@ test("numeric format bounds and explicit schema bounds both apply through refere
 test.each(DIALECTS)(
 	"Renovate's version annotation preserves validation and strict schema checks in %s",
 	async ($schema) => {
-		const { engine, file } = await setup({
+		const { engine, file } = await compatibility({
 			$schema,
 			"x-renovate-version": "44.132.2",
 			type: "object",
@@ -120,13 +73,15 @@ test.each(DIALECTS)(
 			const unknown = await setup(schema)
 			expect(
 				(await unknown.engine.validate(unknown.file, "{}")).failures,
-			).toMatchObject([{ code: "schema" }])
+			).toMatchObject([
+				{ code: schema.format ? "extension-required" : "schema" },
+			])
 		}
 	},
 )
 
 test("CLI and stdio LSP share numeric format diagnostics and retain editor hints", async () => {
-	const { root, file, uri } = await setup({
+	const { root, file, uri } = await compatibility({
 		"x-renovate-version": "44.132.2",
 		type: "object",
 		properties: {

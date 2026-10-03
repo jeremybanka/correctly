@@ -8,3 +8,5 @@ export {
 	diagnosticDetails,
 	type DiagnosticView,
 } from "./diagnostics.ts"
+
+export { builtinExtensions, type SchemaExtension } from "./extensions.ts"

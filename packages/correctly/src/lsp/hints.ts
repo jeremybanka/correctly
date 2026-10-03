@@ -7,6 +7,7 @@ import {
 import type { TextDocument } from "vscode-languageserver-textdocument"
 import { fileURLToPath } from "node:url"
 import { associationFor, isIncluded } from "../core/config.ts"
+import { extensionKey } from "../core/extensions.ts"
 import type { Engine } from "../core/engine.ts"
 
 // Only the schema-selection accessor is hidden. The original AST (including
@@ -34,13 +35,14 @@ export class Hints {
 		if (!isIncluded(engine.project, file)) return undefined
 		const association = associationFor(engine.project, file)
 		if (!association?.schema) return undefined
-		await engine.validator(association.schema)
+		await engine.validator(association.schema, association.extensions)
+		const key = extensionKey(association.schema, association.extensions)
 		let services = this.services.get(engine)
 		if (!services) {
 			services = new Map()
 			this.services.set(engine, services)
 		}
-		let service = services.get(association.schema)
+		let service = services.get(key)
 		if (!service) {
 			service = getLanguageService({
 				schemaRequestService: async (uri) =>
@@ -55,7 +57,7 @@ export class Hints {
 				validate: false,
 				schemas: [{ uri: association.schema, fileMatch: ["*"] }],
 			})
-			services.set(association.schema, service)
+			services.set(key, service)
 		}
 		return service
 	}

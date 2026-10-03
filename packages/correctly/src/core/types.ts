@@ -10,13 +10,26 @@ export type Diagnostic = {
 	range: Range
 	context?: { parent: number; label: string }
 }
-export type Failure = { code: string; message: string; file?: string }
+export type ExtensionRequirement = {
+	schemaUri: string
+	schemaPointer: string
+	format: string
+	suggestedExtension?: string
+}
+export type Failure = {
+	code: string
+	message: string
+	file?: string
+	details?: ExtensionRequirement
+}
 export class CorrectlyError extends Error {
 	readonly code: string
-	constructor(code: string, message: string) {
+	readonly details?: ExtensionRequirement
+	constructor(code: string, message: string, details?: ExtensionRequirement) {
 		super(message)
 		this.name = "CorrectlyError"
 		this.code = code
+		if (details) this.details = details
 	}
 }
 export function failure(error: unknown, file?: string): Failure {
@@ -24,6 +37,9 @@ export function failure(error: unknown, file?: string): Failure {
 		code: error instanceof CorrectlyError ? error.code : "execution",
 		message: error instanceof Error ? error.message : String(error),
 		...(file === undefined ? {} : { file }),
+		...(error instanceof CorrectlyError && error.details
+			? { details: error.details }
+			: {}),
 	}
 }
 export type Association = {
@@ -31,6 +47,7 @@ export type Association = {
 	name: string
 	schema: string | null
 	mode: Mode
+	extensions?: string[]
 }
 export type FileResult = {
 	file: string

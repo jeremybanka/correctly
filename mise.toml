@@ -5,3 +5,4 @@ _.path = ["{{config_root}}/node_modules/.bin"]
 ni = "30.6.0"
 node = "26.10.0"
 pnpm = "12.9.1"
+rust = "1.98.1"
