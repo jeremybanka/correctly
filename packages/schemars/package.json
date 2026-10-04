@@ -13,6 +13,10 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
+		},
+		"./ajv": {
+			"types": "./dist/ajv.d.mts",
+			"import": "./dist/ajv.mjs"
 		}
 	},
 	"files": [

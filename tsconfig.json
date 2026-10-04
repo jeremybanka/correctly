@@ -29,6 +29,9 @@
 			],
 			"correctly/extensions/renovate": [
 				"./packages/correctly/src/extensions/renovate.ts"
+			],
+			"@correctlyjs/schemars/ajv": [
+				"./packages/schemars/src/ajv.ts"
 			]
 		}
 	},

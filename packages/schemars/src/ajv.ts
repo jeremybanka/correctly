@@ -1,9 +1,8 @@
 import { isIP } from "node:net"
 import { selectSchemarsEra } from "./eras.ts"
-import type { SchemaExtension } from "correctly/validators/ajv"
+import type { AjvExtension } from "correctly/validators/ajv"
 
-const formats: Record<string, NonNullable<SchemaExtension["formats"]>[string]> =
-	{}
+const formats: Record<string, NonNullable<AjvExtension["formats"]>[string]> = {}
 for (const bits of [8, 16, 32, 64, 128]) {
 	formats[`int${bits}`] = {
 		type: "number",
@@ -61,7 +60,7 @@ const implementations: Record<string, typeof formats> = {
 }
 
 /** Select one reviewed schema contract, using an exact release or closed range. */
-export function schemars(options: { version: string }): SchemaExtension {
+export function schemars(options: { version: string }): AjvExtension {
 	const era = selectSchemarsEra(options.version)
 	const implementation = implementations[era.since]
 	if (!implementation)

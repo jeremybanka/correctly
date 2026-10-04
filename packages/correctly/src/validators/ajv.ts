@@ -14,7 +14,7 @@ import {
 	knownExtensions,
 	installExtensions,
 	assertFormats,
-	type SchemaExtension,
+	type AjvExtension,
 } from "../core/extensions.ts"
 import {
 	CorrectlyError,
@@ -122,7 +122,7 @@ function validationDiagnostic(
 async function compile(
 	store: SchemaStore,
 	uri: string,
-	extensions: readonly SchemaExtension[],
+	extensions: readonly AjvExtension[],
 ): Promise<ValidateFunction> {
 	try {
 		const resource = await store.load(uri)
@@ -218,7 +218,7 @@ function schemaStore(context: ValidationContext): SchemaStore {
 }
 export type AjvOptions = {
 	schema: string
-	extensions?: readonly SchemaExtension[]
+	extensions?: readonly AjvExtension[]
 }
 export function ajv(options: AjvOptions): Validator {
 	const extensions = [...(options.extensions ?? [])]
@@ -254,4 +254,4 @@ export function ajv(options: AjvOptions): Validator {
 		},
 	}
 }
-export type { SchemaExtension } from "../core/extensions.ts"
+export type { AjvExtension } from "../core/extensions.ts"

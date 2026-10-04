@@ -11,7 +11,9 @@ const packageRoot = fileURLToPath(new URL("../../", import.meta.url))
 const coreRoot = path.resolve(packageRoot, "../correctly")
 const stage = path.resolve(packageRoot, "../../artifacts/.correctly-vsix")
 describe.runIf(
-	existsSync(path.join(packageRoot, "dist/index.mjs")) && existsSync(stage),
+	existsSync(path.join(packageRoot, "dist/index.mjs")) &&
+		existsSync(path.join(packageRoot, "dist/ajv.mjs")) &&
+		existsSync(stage),
 )("published extension boundary", () => {
 	test(
 		"the packed plugin is installed by the project and shared by CLI and isolated VSIX",
@@ -23,7 +25,7 @@ describe.runIf(
 			const config = (enabled: boolean) => `
 import { defineConfig } from "correctly"
 import { ajv } from "correctly/validators/ajv"
-${enabled ? 'import { schemars } from "@correctlyjs/schemars"' : ""}
+${enabled ? 'import { schemars } from "@correctlyjs/schemars/ajv"' : ""}
 export default defineConfig({ files: ["data.json"], associations: [{ files: ["data.json"], validate: ajv({schema:"schema.json", extensions: [${enabled ? 'schemars({version:">=0.8.15 <=0.8.22"})' : ""}]}) }] })`
 			await put(root, "correctly.config.ts", config(false))
 			await put(root, "schema.json", {
@@ -100,6 +102,24 @@ export default defineConfig({ files: ["data.json"], associations: [{ files: ["da
 				publishConfig: { access: "public" },
 			})
 			expect(manifest.dependencies).toBeUndefined()
+			const exports = JSON.parse(
+				execFileSync(
+					process.execPath,
+					[
+						"--input-type=module",
+						"--eval",
+						`import * as catalog from "@correctlyjs/schemars";
+import * as backend from "@correctlyjs/schemars/ajv";
+console.log(JSON.stringify({ root: Object.keys(catalog), ajv: Object.keys(backend), versions: catalog.schemarsEras.flatMap(era => era.versions) }));`,
+					],
+					{ cwd: root, encoding: "utf8" },
+				),
+			)
+			expect(exports).toMatchObject({
+				root: ["schemarsEras"],
+				ajv: ["schemars"],
+			})
+			expect(exports.versions).toContain("0.8.22")
 			const core = JSON.parse(
 				await readFile(path.join(coreRoot, "package.json"), "utf8"),
 			)

@@ -1,5 +1,7 @@
 # Schemars compatibility guide
 
+Import the `schemars` factory from `@correctlyjs/schemars/ajv`. It implements `AjvExtension` from `correctly/validators/ajv`. The package root exports the `schemarsEras` catalog and `SchemarsEra` type.
+
 `schemars({ version: "0.8.22" })` selects an exact reviewed upstream Schemars release. `schemars({ version: ">=0.8.15 <=0.8.22" })` selects a closed range within one compatibility era. The first era contains **0.8.15, 0.8.16, 0.8.17, 0.8.18, 0.8.19, 0.8.20, 0.8.21, and 0.8.22**: all eight independently pinned generators and matching derive crates produce the same 74 schemas. The exported, immutable `schemarsEras` catalog lists every reviewed release and its era's starting version.
 
 The required `version` argument accepts exactly `major.minor.patch` or `>=major.minor.patch <=major.minor.patch` (one space, inclusive bounds). Both endpoints must be reviewed releases in the same era. Reversed bounds, prereleases, caret/tilde ranges, wildcards, open ranges, unreviewed endpoints, and ranges crossing eras are rejected. Future releases never become supported implicitly. Diagnostic IDs preserve the selection, for example `schemars@>=0.8.15 <=0.8.22`. The selection is an explicit compatibility assertion by the configuration author; Correctly cannot infer which Schemars release generated a schema.

@@ -45,9 +45,7 @@ export function configSource(config: TestConfig, built = false): string {
 		built ? import.meta.url : source,
 	).href
 	const extension = new URL(
-		built
-			? "../../../schemars/dist/index.mjs"
-			: "../../../schemars/src/index.ts",
+		built ? "../../../schemars/dist/ajv.mjs" : "../../../schemars/src/ajv.ts",
 		import.meta.url,
 	).href
 	const renovate = new URL(

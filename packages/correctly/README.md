@@ -5,7 +5,7 @@ Compose parsers and validators in one TypeScript configuration for CI and editor
 ```ts
 import { defineConfig, json } from "correctly"
 import { ajv } from "correctly/validators/ajv"
-import { schemars } from "@correctlyjs/schemars"
+import { schemars } from "@correctlyjs/schemars/ajv"
 
 export default defineConfig({
 	associations: [

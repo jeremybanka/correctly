@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test"
-import { schemars, schemarsEras } from "../../src/index.ts"
+import { schemarsEras } from "../../src/index.ts"
+import { schemars } from "../../src/ajv.ts"
 import { selectSchemarsEra } from "../../src/eras.ts"
 import { setup } from "../../../correctly/tests/public/helpers.ts"
 

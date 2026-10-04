@@ -3,7 +3,7 @@ import { CorrectlyError } from "./types.ts"
 import { schemaChildren } from "./schema-walk.ts"
 
 /** Synchronous assertions and annotation-only keywords. Registration is explicit. */
-export type SchemaExtension = {
+export type AjvExtension = {
 	id: string
 	formats?: Readonly<
 		Record<string, FormatDefinition<string> | FormatDefinition<number>>
@@ -39,13 +39,13 @@ export const knownExtensions: readonly ExtensionSuggestion[] = [
 			"phone",
 			"partial-date-time",
 		],
-		guidance: `For a Schemars-generated schema, install @correctlyjs/schemars and import { schemars } from "@correctlyjs/schemars". Select the schema's reviewed Schemars version with schemars({ version: "..." }) in this Ajv validator's extensions in correctly.config.ts.`,
+		guidance: `For a Schemars-generated schema, install @correctlyjs/schemars and import { schemars } from "@correctlyjs/schemars/ajv". Select the schema's reviewed Schemars version with schemars({ version: "..." }) in this Ajv validator's extensions in correctly.config.ts.`,
 	},
 ]
 
 export function installExtensions(
 	ajv: Ajv,
-	extensions: readonly SchemaExtension[],
+	extensions: readonly AjvExtension[],
 ): void {
 	const formats = new Set<string>(),
 		annotations = new Set<string>()

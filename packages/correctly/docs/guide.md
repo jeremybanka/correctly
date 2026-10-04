@@ -65,7 +65,7 @@ Extensions are imported implementations passed to an individual Ajv validator. F
 ```ts
 import { defineConfig, json } from "correctly"
 import { ajv } from "correctly/validators/ajv"
-import { schemars } from "@correctlyjs/schemars"
+import { schemars } from "@correctlyjs/schemars/ajv"
 import { renovate } from "correctly/extensions/renovate"
 
 export default defineConfig({
@@ -97,9 +97,9 @@ Extensions provide synchronous format assertions or annotation-only keywords. Or
 
 ### Schemars extension
 
-Install `@correctlyjs/schemars` alongside `correctly` and import `schemars` from that package. It is released independently; a new upstream Schemars version requires an extension release. The CLI, LSP, and VSIX load the implementation installed in the project.
+Install `@correctlyjs/schemars` alongside `correctly` and import `schemars` from `@correctlyjs/schemars/ajv`. It is released independently; a new upstream Schemars version requires an extension release. The CLI, LSP, and VSIX load the implementation installed in the project.
 
-Select an exact reviewed release, such as `schemars({ version: "0.8.22" })`, or an inclusive closed range within one compatibility era, such as `schemars({ version: ">=0.8.15 <=0.8.22" })`. The extension's npm version and the upstream Schemars version selected here are independent. Its peer dependency declares the supported Correctly API versions. Core contains installation suggestions only; it does not bundle or depend on the extension.
+Select an exact reviewed release, such as `schemars({ version: "0.8.22" })`, or an inclusive closed range within one compatibility era, such as `schemars({ version: ">=0.8.15 <=0.8.22" })`. The extension's npm version and the upstream Schemars version selected here are independent. Its peer dependency declares the supported Correctly API versions. The package root exports `schemarsEras` and `SchemarsEra`; `schemars()` returns the `AjvExtension` type exported by `correctly/validators/ajv`. Core contains installation suggestions only; it does not bundle or depend on the extension.
 
 See the [extension guide](https://github.com/jeremybanka/correctly/blob/main/packages/schemars/docs/guide.md) for the reviewed releases, exhaustive format inventory, numeric precision policies, and other limits.
 
@@ -111,20 +111,20 @@ Correctly checks format support before compiling each loaded schema resource, in
 extension-required: This schema needs an extension.
 │ Format "uint64" has no enabled validator; validation cannot proceed.
 │ Schema: file:///project/schema.json#/properties/limit/format
-│ For a Schemars-generated schema, install @correctlyjs/schemars and import { schemars } from "@correctlyjs/schemars". Select the schema's reviewed Schemars version with schemars({ version: "..." }) in this Ajv validator's extensions in correctly.config.ts.
+│ For a Schemars-generated schema, install @correctlyjs/schemars and import { schemars } from "@correctlyjs/schemars/ajv". Select the schema's reviewed Schemars version with schemars({ version: "..." }) in this Ajv validator's extensions in correctly.config.ts.
 ```
 
-A known provider is suggested with an import and exact version; an unknown format receives guidance to enable an implementation, without inventing a package to install. JSON failures additionally expose `details: { schemaUri, schemaPointer, format, suggestedExtension? }`. The pointer identifies the `format` keyword in the schema resource. Ordinary validation failures remain exit 1; unknown keywords and invalid schemas continue to fail strict compilation.
+A known provider is suggested with a package and import path; select the schema's reviewed upstream version explicitly. An unknown format receives guidance to enable an implementation, without inventing a package to install. JSON failures additionally expose `details: { schemaUri, schemaPointer, format, suggestedExtension? }`. The pointer identifies the `format` keyword in the schema resource. Ordinary validation failures remain exit 1; unknown keywords and invalid schemas continue to fail strict compilation.
 
 ### Authoring an extension
 
-The first-party implementations use the same exported `SchemaExtension` interface available to consumers:
+The first-party implementations use the same exported `AjvExtension` interface available to consumers:
 
 ```ts
 import { defineConfig } from "correctly"
-import { ajv, type SchemaExtension } from "correctly/validators/ajv"
+import { ajv, type AjvExtension } from "correctly/validators/ajv"
 
-const company: SchemaExtension = {
+const company: AjvExtension = {
 	id: "company@1",
 	formats: {
 		"ticket-id": {

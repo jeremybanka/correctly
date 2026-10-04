@@ -7,8 +7,8 @@ import {
 	json,
 	type ProjectConfig,
 } from "../../src/core/index.ts"
-import { ajv, type SchemaExtension } from "../../src/validators/ajv.ts"
-import { schemars } from "../../../schemars/src/index.ts"
+import { ajv, type AjvExtension } from "../../src/validators/ajv.ts"
+import { schemars } from "../../../schemars/src/ajv.ts"
 import { renovate } from "../../src/extensions/renovate.ts"
 import { check } from "../../src/cli/check.ts"
 import { readableReport } from "../../src/cli/readable.ts"
@@ -17,7 +17,7 @@ import { lspClient } from "./lsp-client.ts"
 
 const uint = { type: "integer", format: "uint16" }
 const extension = () => schemars({ version: "0.8.22" })
-function config(extensions: SchemaExtension[] = []): ProjectConfig {
+function config(extensions: AjvExtension[] = []): ProjectConfig {
 	return defineConfig({
 		associations: [
 			{
@@ -28,7 +28,7 @@ function config(extensions: SchemaExtension[] = []): ProjectConfig {
 		],
 	})
 }
-async function configured(schema: unknown, extensions: SchemaExtension[] = []) {
+async function configured(schema: unknown, extensions: AjvExtension[] = []) {
 	const result = await setup(schema)
 	result.project.config = config(extensions)
 	return { ...result, engine: new Engine(result.project) }
@@ -155,7 +155,7 @@ test("missing and annotation-only formats give actionable CLI and JSON failures"
 		)
 		expect(output).toContain(
 			["uint16", "int32", "int64", "float", "double"].includes(format)
-				? 'import { schemars } from "@correctlyjs/schemars"'
+				? 'import { schemars } from "@correctlyjs/schemars/ajv"'
 				: "Pass an extension implementing",
 		)
 		expect(output).toContain("correctly.config.ts")
@@ -183,7 +183,7 @@ test("schema positions are inspected while defaults, enums, and examples stay op
 
 test("imported implementations assert values and preserve strict schema checks", async () => {
 	const schema = { type: "string", format: "even-length", "x-origin": "test" }
-	const extension: SchemaExtension = {
+	const extension: AjvExtension = {
 		id: "test@1",
 		formats: {
 			"even-length": {
@@ -221,12 +221,12 @@ test("version selection is exact and extension identifiers cannot replace implem
 			"Unsupported Schemars version",
 		)
 	await expect(
-		configured(uint, ["schemars@0.8.22" as unknown as SchemaExtension]),
+		configured(uint, ["schemars@0.8.22" as unknown as AjvExtension]),
 	).rejects.toMatchObject({ code: "config" })
 })
 
 test("duplicate identities, conflicts, and async implementations fail visibly", async () => {
-	const definitions: SchemaExtension[][] = [
+	const definitions: AjvExtension[][] = [
 		[extension(), extension()],
 		[
 			extension(),
@@ -243,7 +243,7 @@ test("duplicate identities, conflicts, and async implementations fail visibly", 
 					custom: {
 						async: true,
 						validate: async () => true,
-					} as unknown as NonNullable<SchemaExtension["formats"]>[string],
+					} as unknown as NonNullable<AjvExtension["formats"]>[string],
 				},
 			},
 		],
@@ -282,7 +282,7 @@ test("LSP displays extension guidance and applies a saved config's imported impl
 	const client = await lspClient([root])
 	await client.open(uri, '{"limit":1}')
 	expect((await client.wait(uri, 1)).diagnostics[0]?.message).toContain(
-		'import { schemars } from "@correctlyjs/schemars"',
+		'import { schemars } from "@correctlyjs/schemars/ajv"',
 	)
 	const source = configSource({
 		files: ["data/**"],

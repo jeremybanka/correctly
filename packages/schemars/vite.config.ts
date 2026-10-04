@@ -3,12 +3,12 @@ export default defineConfig({
 	pack: [
 		{
 			clean: true,
-			entry: { index: "src/index.ts" },
+			entry: { index: "src/index.ts", ajv: "src/ajv.ts" },
 			format: "esm",
 			outDir: "dist",
 			sourcemap: true,
 			deps: { neverBundle: true },
-			dts: { entry: ["src/index.ts"], sourcemap: true },
+			dts: { entry: ["src/index.ts", "src/ajv.ts"], sourcemap: true },
 		},
 	],
 	test: { include: ["tests/**/*.test.ts"] },
