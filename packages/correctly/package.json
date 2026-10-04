@@ -52,7 +52,7 @@
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.138.0",
 		"@vscode/vsce": "4.0.0",
-		"rolldown": "1.2.11",
+		"rolldown": "1.2.12",
 		"vscode-languageclient": "10.1.2"
 	},
 	"engines": {
