@@ -21,8 +21,11 @@ describe.runIf(
 		const manifest = JSON.parse(
 			await readFile(path.join(isolated, "extension/package.json"), "utf8"),
 		) as { main: string; version: string }
+		const pkg = JSON.parse(
+			await readFile(path.join(packageRoot, "package.json"), "utf8"),
+		) as { version: string }
 		expect(manifest.main).toBe("./dist/extension.mjs")
-		expect(manifest.version).toBe("0.0.0")
+		expect(manifest.version).toBe(pkg.version)
 		expect(existsSync(path.join(isolated, "extension/node_modules"))).toBe(
 			false,
 		)
