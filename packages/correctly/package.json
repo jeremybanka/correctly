@@ -48,7 +48,7 @@
 		"vscode-languageserver-textdocument": "1.0.15"
 	},
 	"devDependencies": {
-		"@types/node": "26.6.3",
+		"@types/node": "26.6.4",
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.138.0",
 		"@vscode/vsce": "4.0.0",
