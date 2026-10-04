@@ -1,6 +1,6 @@
 {
 	"name": "correctly",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Shared JSON Schema validation for CI and editors",
 	"repository": {
 		"type": "git",
