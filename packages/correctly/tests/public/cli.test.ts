@@ -135,62 +135,67 @@ test("excerpts use the validated source snapshot and preserve JSON diagnostic or
 	expect(sources.has(file)).toBe(true)
 })
 
-test("terminal colors follow Lasertag's palette, honor overrides, and leave JSON unstyled", async () => {
-	const { root } = await setup()
-	await put(root, "data/test.json", '{\n  "name": 42\n}')
-	const environment = { ...process.env }
-	delete environment.FORCE_COLOR
-	delete environment.NO_COLOR
-	delete environment.NODE_DISABLE_COLORS
-	const invoke = (env: NodeJS.ProcessEnv, args: string[] = []) =>
-		spawnSync(process.execPath, [entry, "check", ...args], {
-			cwd: root,
-			encoding: "utf8",
-			env: { ...environment, ...env },
+// This integration case starts eight CLI processes; allow CI startup overhead.
+test(
+	"terminal colors follow Lasertag's palette, honor overrides, and leave JSON unstyled",
+	{ timeout: 15_000 },
+	async () => {
+		const { root } = await setup()
+		await put(root, "data/test.json", '{\n  "name": 42\n}')
+		const environment = { ...process.env }
+		delete environment.FORCE_COLOR
+		delete environment.NO_COLOR
+		delete environment.NODE_DISABLE_COLORS
+		const invoke = (env: NodeJS.ProcessEnv, args: string[] = []) =>
+			spawnSync(process.execPath, [entry, "check", ...args], {
+				cwd: root,
+				encoding: "utf8",
+				env: { ...environment, ...env },
+			})
+		const plain = invoke({})
+		expect(plain.status).toBe(1)
+		expect(stripVTControlCharacters(plain.stdout)).toBe(plain.stdout)
+		const colored = invoke({ FORCE_COLOR: "1" })
+		expect(colored.status).toBe(1)
+		expect(colored.stderr).toBe("")
+		expect(stripVTControlCharacters(colored.stdout)).toBe(plain.stdout)
+		const styled = (format: Parameters<typeof styleText>[0], text: string) =>
+			styleText(format, text, { validateStream: false })
+		for (const [format, text] of [
+			["bold", "data/test.json"],
+			[["bold", "red"], "1 error"],
+			["cyan", "schema/type"],
+			[["bold", "yellow"], "^^"],
+			["dim", "1 │"],
+		] as const)
+			expect(colored.stdout).toContain(styled(format, text))
+		for (const env of [
+			{ NO_COLOR: "1" },
+			{ FORCE_COLOR: "0" },
+			{ NODE_DISABLE_COLORS: "1" },
+		]) {
+			const disabled = invoke(env)
+			expect(disabled.status).toBe(1)
+			expect(disabled.stdout).toBe(plain.stdout)
+		}
+		const json = invoke({ FORCE_COLOR: "1" }, ["--format", "json"])
+		expect(json.status).toBe(1)
+		expect(stripVTControlCharacters(json.stdout)).toBe(json.stdout)
+		expect(JSON.parse(json.stdout)).toEqual(await check({ cwd: root }))
+		await put(root, "data/test.json", { name: "valid" })
+		const valid = invoke({ FORCE_COLOR: "1" })
+		expect(valid.status).toBe(0)
+		expect(valid.stdout).toContain(styled(["bold", "green"], "✓ Check passed"))
+		await put(root, "correctly.config.ts", {
+			associations: [{ files: ["data/**"], schema: "missing.json" }],
 		})
-	const plain = invoke({})
-	expect(plain.status).toBe(1)
-	expect(stripVTControlCharacters(plain.stdout)).toBe(plain.stdout)
-	const colored = invoke({ FORCE_COLOR: "1" })
-	expect(colored.status).toBe(1)
-	expect(colored.stderr).toBe("")
-	expect(stripVTControlCharacters(colored.stdout)).toBe(plain.stdout)
-	const styled = (format: Parameters<typeof styleText>[0], text: string) =>
-		styleText(format, text, { validateStream: false })
-	for (const [format, text] of [
-		["bold", "data/test.json"],
-		[["bold", "red"], "1 error"],
-		["cyan", "schema/type"],
-		[["bold", "yellow"], "^^"],
-		["dim", "1 │"],
-	] as const)
-		expect(colored.stdout).toContain(styled(format, text))
-	for (const env of [
-		{ NO_COLOR: "1" },
-		{ FORCE_COLOR: "0" },
-		{ NODE_DISABLE_COLORS: "1" },
-	]) {
-		const disabled = invoke(env)
-		expect(disabled.status).toBe(1)
-		expect(disabled.stdout).toBe(plain.stdout)
-	}
-	const json = invoke({ FORCE_COLOR: "1" }, ["--format", "json"])
-	expect(json.status).toBe(1)
-	expect(stripVTControlCharacters(json.stdout)).toBe(json.stdout)
-	expect(JSON.parse(json.stdout)).toEqual(await check({ cwd: root }))
-	await put(root, "data/test.json", { name: "valid" })
-	const valid = invoke({ FORCE_COLOR: "1" })
-	expect(valid.status).toBe(0)
-	expect(valid.stdout).toContain(styled(["bold", "green"], "✓ Check passed"))
-	await put(root, "correctly.config.ts", {
-		associations: [{ files: ["data/**"], schema: "missing.json" }],
-	})
-	const failed = invoke({ FORCE_COLOR: "1" })
-	expect(failed.status).toBe(2)
-	expect(failed.stdout).toContain(
-		styled(["bold", "red"], "▲ Check failed with 1 failure"),
-	)
-})
+		const failed = invoke({ FORCE_COLOR: "1" })
+		expect(failed.status).toBe(2)
+		expect(failed.stdout).toContain(
+			styled(["bold", "red"], "▲ Check failed with 1 failure"),
+		)
+	},
+)
 
 test("headers explicitly describe syntax-only coverage, JSONC mode, and null-schema associations", async () => {
 	const { root } = await setup(
