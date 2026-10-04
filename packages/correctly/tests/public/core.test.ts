@@ -108,14 +108,23 @@ describe("parsing and diagnostics", () => {
 				count: { type: "number" },
 			},
 		})
-		const validate = await engine.validator(
-			new URL("schema.json", `file://${engine.project.root}/`).href,
-		)
 		const value = { count: "2", extra: true }
-		expect(validate(value)).toBe(false)
+		const validator =
+			await engine.project.config.associations[0]!.validate!.prepare(
+				engine.context,
+			)
+		const diagnostics = await validator.validate({
+			file: "data/test.json",
+			text: JSON.stringify(value),
+			parsed: { value, diagnostics: [], locate: () => undefined },
+		})
 		expect(value).toEqual({ count: "2", extra: true })
-		expect(validate.errors?.map((e) => e.keyword)).toEqual(
-			expect.arrayContaining(["required", "additionalProperties", "type"]),
+		expect(diagnostics.map((d) => d.code)).toEqual(
+			expect.arrayContaining([
+				"schema/required",
+				"schema/additionalProperties",
+				"schema/type",
+			]),
 		)
 	})
 	test("embedded $schema stays ordinary data and never selects a schema", async () => {
@@ -206,15 +215,15 @@ describe("configuration", () => {
 	])("rejects invalid config: %s", async (text) => {
 		const root = await temp()
 		await expect(
-			loadProject(await put(root, "correctly.config.json", text)),
+			loadProject(await put(root, "correctly.config.ts", text)),
 		).rejects.toMatchObject({ code: "config" })
 	})
 	test("nearest config discovery stops at workspace boundary", async () => {
 		const root = await temp()
-		await put(root, "correctly.config.json", { associations: [] })
-		await put(root, "nested/correctly.config.json", { associations: [] })
+		await put(root, "correctly.config.ts", { associations: [] })
+		await put(root, "nested/correctly.config.ts", { associations: [] })
 		expect(await discoverConfig(path.join(root, "nested/deep"), root)).toBe(
-			path.join(root, "nested/correctly.config.json"),
+			path.join(root, "nested/correctly.config.ts"),
 		)
 		await expect(
 			discoverConfig(path.join(root, "other"), path.join(root, "other")),

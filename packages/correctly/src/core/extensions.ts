@@ -12,41 +12,35 @@ export type SchemaExtension = {
 	annotations?: readonly string[]
 }
 
-export const builtinExtensions: readonly SchemaExtension[] = [
-	schemars,
-	{ id: "renovate", annotations: ["x-renovate-version"] },
+export const knownExtensions: readonly SchemaExtension[] = [
+	schemars({ version: "0.8.22" }),
 ]
-
-export function extensionKey(
-	uri: string,
-	extensions: readonly string[] = [],
-): string {
-	return JSON.stringify([uri, [...new Set(extensions)].sort()])
-}
 
 export function installExtensions(
 	ajv: Ajv,
-	enabled: readonly string[],
-	registry: readonly SchemaExtension[],
+	extensions: readonly SchemaExtension[],
 ): void {
-	const identifiers = new Set<string>()
-	for (const extension of registry) {
-		if (identifiers.has(extension.id))
-			throw new CorrectlyError(
-				"extension",
-				`Duplicate extension identifier: ${extension.id}`,
-			)
-		identifiers.add(extension.id)
-	}
 	const formats = new Set<string>(),
 		annotations = new Set<string>()
-	for (const id of new Set(enabled)) {
-		const extension = registry.find((entry) => entry.id === id)
-		if (!extension)
+	const identifiers = new Set<string>()
+	for (const extension of extensions) {
+		if (
+			!extension ||
+			typeof extension !== "object" ||
+			typeof extension.id !== "string" ||
+			!extension.id
+		)
 			throw new CorrectlyError(
 				"extension",
-				`Unknown extension ${JSON.stringify(id)}. Available extensions: ${registry.map((entry) => entry.id).join(", ")}. Enable an installed extension in this schema's association.`,
+				"Pass extension implementations to ajv({ extensions: [...] }); string identifiers are not implementations.",
 			)
+		const id = extension.id
+		if (identifiers.has(id))
+			throw new CorrectlyError(
+				"extension",
+				`Duplicate extension identifier: ${id}`,
+			)
+		identifiers.add(id)
 		for (const [name, definition] of Object.entries(extension.formats ?? {})) {
 			if (formats.has(name))
 				throw new CorrectlyError(
@@ -107,8 +101,8 @@ export function assertFormats(
 			Object.hasOwn(entry.formats ?? {}, format),
 		)?.id
 		const hint = extension
-			? `Add ${JSON.stringify(extension)} to "extensions" in this schema's association in correctly.config.json.`
-			: `Enable an extension that validates ${JSON.stringify(format)} in this schema's association. Custom extensions can be registered through the Engine API.`
+			? `Import schemars from "correctly/extensions/schemars" and add schemars({ version: "0.8.22" }) to this Ajv validator's extensions in correctly.config.ts.`
+			: `Pass an extension implementing ${JSON.stringify(format)} to this Ajv validator's extensions in correctly.config.ts.`
 		throw new CorrectlyError(
 			"extension-required",
 			`This schema needs an extension.\nFormat ${JSON.stringify(format)} has no enabled validator; validation cannot proceed.\nSchema: ${uri}#${location}/format\n${hint}`,

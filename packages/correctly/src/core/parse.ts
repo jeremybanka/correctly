@@ -7,13 +7,15 @@ import {
 	type Node,
 	type ParseError,
 } from "jsonc-parser"
-import type { Diagnostic, Mode, Position } from "./types.ts"
+import type { Diagnostic, Position } from "./types.ts"
 
 export type SourceSpan = { offset: number; length: number }
 export type ParsedDocument = {
 	value: unknown
 	diagnostics: Diagnostic[]
 	locate: (pointer: string, key?: boolean) => SourceSpan | undefined
+	/** Exact numeric lexeme when the parser can preserve it. */
+	rawNumber?: (pointer: string) => string | undefined
 }
 export type ParsedJsonDocument = ParsedDocument & { root: Node | undefined }
 
@@ -63,7 +65,10 @@ export function diagnostic(
 	}
 }
 
-export function parseDocument(text: string, mode: Mode): ParsedJsonDocument {
+export function parseDocument(
+	text: string,
+	mode: "json" | "jsonc",
+): ParsedJsonDocument {
 	const errors: ParseError[] = []
 	const root = parseTree(text, errors, {
 		disallowComments: mode === "json",
@@ -134,6 +139,25 @@ export function parseDocument(text: string, mode: Mode): ParsedJsonDocument {
 		root,
 		value: root ? value(root) : undefined,
 		diagnostics,
+		rawNumber: (jsonPointer) => {
+			const parts =
+				jsonPointer === ""
+					? []
+					: jsonPointer
+							.slice(1)
+							.split("/")
+							.map((p) => p.replace(/~1/g, "/").replace(/~0/g, "~"))
+			let node = root
+			for (const part of parts) {
+				if (!node) break
+				node = findNodeAtLocation(node, [
+					node.type === "array" ? Number(part) : part,
+				])
+			}
+			return node?.type === "number"
+				? text.slice(node.offset, node.offset + node.length)
+				: undefined
+		},
 		locate: (jsonPointer, key = false) => {
 			const node = locate(root, jsonPointer, key)
 			return node ? { offset: node.offset, length: node.length } : undefined

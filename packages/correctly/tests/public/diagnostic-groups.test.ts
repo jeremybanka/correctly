@@ -139,7 +139,7 @@ test("nested alternatives keep their hierarchy and unrelated sibling errors rema
 
 		▲ Check found 2 errors in 1 file
 
-		1 checked, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures"
+		1 checked, 1 validated, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures"
 	`)
 })
 

@@ -1,4 +1,4 @@
-export type Mode = "json" | "jsonc"
+export type Mode = string
 export type Position = { line: number; character: number }
 export type Range = { start: Position; end: Position }
 export type Diagnostic = {
@@ -32,12 +32,20 @@ export class CorrectlyError extends Error {
 		if (details) this.details = details
 	}
 }
+export function isCorrectlyError(error: unknown): error is CorrectlyError {
+	return (
+		error instanceof Error &&
+		error.name === "CorrectlyError" &&
+		"code" in error &&
+		typeof error.code === "string"
+	)
+}
 export function failure(error: unknown, file?: string): Failure {
 	return {
-		code: error instanceof CorrectlyError ? error.code : "execution",
+		code: isCorrectlyError(error) ? error.code : "execution",
 		message: error instanceof Error ? error.message : String(error),
 		...(file === undefined ? {} : { file }),
-		...(error instanceof CorrectlyError && error.details
+		...(isCorrectlyError(error) && error.details
 			? { details: error.details }
 			: {}),
 	}
@@ -46,24 +54,26 @@ export type Association = {
 	index: number
 	name: string
 	schema: string | null
+	validator: string | null
 	mode: Mode
 	extensions?: string[]
 }
 export type FileResult = {
 	file: string
 	mode: Mode
-	coverage: "schema" | "syntax-only" | "excluded"
+	coverage: "schema" | "validated" | "syntax-only" | "excluded"
 	association: Association | null
 	diagnostics: Diagnostic[]
 	failures: Failure[]
 }
 export type Report = {
-	reportVersion: 1
+	reportVersion: 2
 	config: string | null
 	files: FileResult[]
 	failures: Failure[]
 	summary: {
 		checked: number
+		validated: number
 		schemaCovered: number
 		syntaxOnly: number
 		invalid: number

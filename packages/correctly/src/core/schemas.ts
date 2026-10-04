@@ -76,7 +76,12 @@ export class SchemaStore {
 	private readonly read: ReadText
 	private readonly request: typeof fetch
 	private requests = 0
-	constructor(project: Project, options: StoreOptions = {}) {
+	constructor(
+		project: Pick<Project, "root"> & {
+			config: Pick<Project["config"], "remote">
+		},
+		options: StoreOptions = {},
+	) {
 		this.options = options
 		const remote = project.config.remote
 		this.cacheDir = path.resolve(

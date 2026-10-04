@@ -4,7 +4,7 @@ import type { CompletionList, Hover } from "vscode-languageserver/node"
 import { expect, test } from "vite-plus/test"
 import { check } from "../../src/cli/check.ts"
 import { lspClient } from "./lsp-client.ts"
-import { put, setup } from "./helpers.ts"
+import { put, setup, configSource } from "./helpers.ts"
 
 test("stdio LSP and CLI agree on document diagnostics; editor supplies hints", async () => {
 	const { root, uri, engine, file } = await setup()
@@ -79,17 +79,23 @@ test("rapid unsaved edits publish the latest version; schema/config changes refr
 	expect((await client.wait(uri, 4, after)).diagnostics[0]?.code).toBe(
 		"schema/type",
 	)
-	const configUri = pathToFileURL(path.join(root, "correctly.config.json")).href
+	const configUri = pathToFileURL(path.join(root, "correctly.config.ts")).href
+	await client.open(configUri, configSource({ associations: [] }))
+	// Opening unsaved TypeScript cannot replace the active configuration.
+	expect(
+		(
+			await client.request<CompletionList>("textDocument/completion", uri, {
+				line: 0,
+				character: 2,
+			})
+		).items,
+	).toEqual([])
+	await put(root, "correctly.config.ts", { associations: [] })
 	const configAfter = client.notifications.length
-	await client.open(configUri, '{"associations":[]}')
-	expect((await client.wait(uri, 4, configAfter)).diagnostics).toEqual([])
-	const closeAfter = client.notifications.length
-	await client.connection.sendNotification("textDocument/didClose", {
+	await client.connection.sendNotification("textDocument/didSave", {
 		textDocument: { uri: configUri },
 	})
-	expect((await client.wait(uri, 4, closeAfter)).diagnostics[0]?.code).toBe(
-		"schema/type",
-	)
+	expect((await client.wait(uri, 4, configAfter)).diagnostics).toEqual([])
 })
 
 test("stdio workspace roots select separate configuration and support folder changes", async () => {

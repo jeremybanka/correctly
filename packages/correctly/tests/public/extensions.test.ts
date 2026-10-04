@@ -3,34 +3,54 @@ import { pathToFileURL } from "node:url"
 import { expect, test } from "vite-plus/test"
 import {
 	Engine,
-	loadProject,
+	defineConfig,
+	json,
 	type ProjectConfig,
-	type SchemaExtension,
 } from "../../src/core/index.ts"
+import { ajv, type SchemaExtension } from "../../src/validators/ajv.ts"
+import { schemars } from "../../src/extensions/schemars.ts"
+import { renovate } from "../../src/extensions/renovate.ts"
 import { check } from "../../src/cli/check.ts"
 import { readableReport } from "../../src/cli/readable.ts"
-import { setup, put } from "./helpers.ts"
+import { configSource, setup, put } from "./helpers.ts"
 import { lspClient } from "./lsp-client.ts"
 
-const schemars = "schemars@0.8.22"
 const uint = { type: "integer", format: "uint16" }
-const config = (extensions: string[] = []): ProjectConfig => ({
-	associations: [{ files: ["data/**"], schema: "schema.json", extensions }],
-})
+const extension = () => schemars({ version: "0.8.22" })
+function config(extensions: SchemaExtension[] = []): ProjectConfig {
+	return defineConfig({
+		associations: [
+			{
+				files: ["data/**"],
+				parse: json(),
+				validate: ajv({ schema: "schema.json", extensions }),
+			},
+		],
+	})
+}
+async function configured(schema: unknown, extensions: SchemaExtension[] = []) {
+	const result = await setup(schema)
+	result.project.config = config(extensions)
+	return { ...result, engine: new Engine(result.project) }
+}
 
 test.each([false, true])(
-	"same URI has isolated validators with and without extensions (enabled first: %s)",
+	"same URI has isolated extension implementations (enabled first: %s)",
 	async (enabledFirst) => {
-		const { engine, root } = await setup(uint, {
+		const { project, root } = await setup(uint)
+		project.config = defineConfig({
 			associations: [
 				{
 					files: ["data/enabled.json"],
-					schema: "schema.json",
-					extensions: [schemars],
+					validate: ajv({ schema: "schema.json", extensions: [extension()] }),
 				},
-				{ files: ["data/plain.json"], schema: "schema.json" },
+				{
+					files: ["data/plain.json"],
+					validate: ajv({ schema: "schema.json" }),
+				},
 			],
 		})
+		const engine = new Engine(project)
 		for (const enabled of enabledFirst
 			? [true, false, true]
 			: [false, true, false]) {
@@ -45,7 +65,10 @@ test.each([false, true])(
 					: [
 							{
 								code: "extension-required",
-								details: { format: "uint16", suggestedExtension: schemars },
+								details: {
+									format: "uint16",
+									suggestedExtension: "schemars@0.8.22",
+								},
 							},
 						],
 			)
@@ -53,59 +76,56 @@ test.each([false, true])(
 	},
 )
 
-test("extension choices follow the winning association without merging", async () => {
-	const { engine, file } = await setup(uint, {
-		associations: [
-			{ files: ["data/**"], schema: "schema.json", extensions: [schemars] },
-			{ files: ["data/test.json"], schema: "schema.json" },
-		],
+test("last matching association selects its complete parser and validator", async () => {
+	const { project, file } = await configured(uint, [extension()])
+	project.config.associations.push({
+		files: ["data/test.json"],
+		validate: ajv({ schema: "schema.json" }),
 	})
-	expect((await engine.validate(file, "1")).failures[0]?.code).toBe(
-		"extension-required",
-	)
+	expect(
+		(await new Engine(project).validate(file, "1")).failures[0]?.code,
+	).toBe("extension-required")
 })
 
 test.each(["child.json", "https://example.test/child"])(
-	"extensions apply through references to %s and report escaped schema pointers",
+	"extension scope follows references to %s",
 	async (ref) => {
-		const project = await setup(
+		const { project, root, file } = await configured(
 			{ $ref: `${ref}#/definitions/a~1b~0c` },
-			config([schemars]),
+			[extension()],
 		)
-		const child = {
+		await put(root, "child.json", {
 			$id: "https://example.test/child",
 			definitions: { "a/b~c": uint },
-		}
-		await put(project.root, "child.json", child)
-		if (ref.startsWith("https:")) {
-			// Preloaded IDs use the same policy as resources loaded on demand.
-			await project.engine.store.load(
-				pathToFileURL(path.join(project.root, "child.json")).href,
-			)
-		}
-		expect(await project.engine.validate(project.file, "1")).toMatchObject({
+		})
+		project.config.associations.push({
+			files: ["unused/**"],
+			validate: ajv({ schema: "child.json", extensions: [extension()] }),
+		})
+		const engine = new Engine(project)
+		expect(await engine.validate(file, "1")).toMatchObject({
 			failures: [],
 			diagnostics: [],
 		})
+		expect((await engine.validate(file, "65536")).diagnostics[0]?.code).toBe(
+			"schema/format",
+		)
+		project.config.associations[0]!.validate = ajv({ schema: "schema.json" })
 		expect(
-			(await project.engine.validate(project.file, "65536")).diagnostics[0]
-				?.code,
-		).toBe("schema/format")
-		project.project.config.associations[0]!.extensions = []
-		const failure = (await project.engine.validate(project.file, "1"))
-			.failures[0]!
-		expect(failure).toMatchObject({
-			code: "extension-required",
-			details: {
-				schemaUri: pathToFileURL(path.join(project.root, "child.json")).href,
-				schemaPointer: "/definitions/a~1b~0c/format",
-				format: "uint16",
+			(await new Engine(project).validate(file, "1")).failures,
+		).toMatchObject([
+			{
+				code: "extension-required",
+				details: {
+					schemaUri: pathToFileURL(path.join(root, "child.json")).href,
+					schemaPointer: "/definitions/a~1b~0c/format",
+				},
 			},
-		})
+		])
 	},
 )
 
-test("unknown and annotation-only formats stop validation with actionable JSON and readable output", async () => {
+test("missing and annotation-only formats give actionable CLI and JSON failures", async () => {
 	for (const format of [
 		"uint16",
 		"int32",
@@ -135,14 +155,14 @@ test("unknown and annotation-only formats stop validation with actionable JSON a
 		)
 		expect(output).toContain(
 			["uint16", "int32", "int64", "float", "double"].includes(format)
-				? 'Add "schemars@0.8.22" to "extensions"'
-				: "Enable an extension that validates",
+				? 'schemars({ version: "0.8.22" })'
+				: "Pass an extension implementing",
 		)
-		expect(output).not.toContain("Cannot compile schema")
+		expect(output).toContain("correctly.config.ts")
 	}
 })
 
-test("format assertions inspect schema positions, including unused definitions, but leave data opaque", async () => {
+test("schema positions are inspected while defaults, enums, and examples stay opaque", async () => {
 	const { engine, file } = await setup({
 		type: "object",
 		default: { format: "not-a-format" },
@@ -161,68 +181,64 @@ test("format assertions inspect schema positions, including unused definitions, 
 	})
 })
 
-test("registered extensions remain opt-in, and enforce assertions without weakening strict schema checks", async () => {
+test("imported implementations assert values and preserve strict schema checks", async () => {
 	const schema = { type: "string", format: "even-length", "x-origin": "test" }
-	const project = await setup(schema, config(["test@1"]))
 	const extension: SchemaExtension = {
 		id: "test@1",
 		formats: {
 			"even-length": {
 				type: "string",
-				validate: (value: string) => value.length % 2 === 0,
+				validate: (value) => value.length % 2 === 0,
 			},
 		},
 		annotations: ["x-origin"],
 	}
-	const engine = new Engine(project.project, { extensions: [extension] })
-	expect(await engine.validate(project.file, '"ab"')).toMatchObject({
-		diagnostics: [],
+	const { engine, file } = await configured(schema, [extension])
+	expect(await engine.validate(file, '"ab"')).toMatchObject({
 		failures: [],
+		diagnostics: [],
 	})
+	expect((await engine.validate(file, '"a"')).diagnostics[0]?.code).toBe(
+		"schema/format",
+	)
+	const missing = await configured(schema)
 	expect(
-		(await engine.validate(project.file, '"a"')).diagnostics[0]?.code,
-	).toBe("schema/format")
-	project.project.config.associations[0]!.extensions = []
-	expect(
-		(await engine.validate(project.file, '"ab"')).failures[0],
-	).toMatchObject({
-		code: "extension-required",
-		details: { suggestedExtension: "test@1" },
-	})
-	const typo = await setup(
+		(await missing.engine.validate(missing.file, '"ab"')).failures[0]?.code,
+	).toBe("extension-required")
+	const typo = await configured(
 		{ type: "string", format: "email", typoKeyword: true },
-		config([schemars]),
+		[extension],
 	)
 	expect(
-		(await typo.engine.validate(typo.file, '"person@example.com"')).failures[0]
+		(await typo.engine.validate(typo.file, '"x@example.com"')).failures[0]
 			?.code,
 	).toBe("schema")
 })
 
-test.each(["schemars", "schemars@1.2.2", "misspelled"])(
-	"unknown extension %s is a configuration failure even on an unused association",
-	async (id) => {
-		const { engine } = await setup({}, config([id]))
-		await expect(engine.prepare()).rejects.toMatchObject({
-			code: "extension",
-			message: expect.stringContaining(`Unknown extension "${id}"`),
-		})
-	},
-)
+test("version selection is exact and extension identifiers cannot replace implementations", async () => {
+	for (const version of ["0.8", "^0.8.22", "1.2.2"])
+		expect(() => schemars({ version: version as "0.8.22" })).toThrow(
+			"Unsupported Schemars version",
+		)
+	await expect(
+		configured(uint, ["schemars@0.8.22" as unknown as SchemaExtension]),
+	).rejects.toMatchObject({ code: "config" })
+})
 
-test("duplicate identifiers, conflicting implementations, async validators, and annotation overrides fail clearly", async () => {
+test("duplicate identities, conflicts, and async implementations fail visibly", async () => {
 	const definitions: SchemaExtension[][] = [
-		[{ id: schemars }],
+		[extension(), extension()],
 		[
+			extension(),
 			{
-				id: "test@1",
+				id: "custom",
 				formats: { uint16: { type: "number", validate: () => true } },
 			},
 		],
-		[{ id: "test@1", annotations: ["type"] }],
+		[{ id: "custom", annotations: ["type"] }],
 		[
 			{
-				id: "test@1",
+				id: "custom",
 				formats: {
 					custom: {
 						async: true,
@@ -233,44 +249,22 @@ test("duplicate identifiers, conflicting implementations, async validators, and 
 		],
 	]
 	for (const extensions of definitions) {
-		const { project } = await setup(
-			{},
-			config([schemars, ...(extensions[0]!.id === schemars ? [] : ["test@1"])]),
-		)
-		await expect(
-			new Engine(project, { extensions }).prepare(),
-		).rejects.toMatchObject({ code: "extension" })
+		const { engine } = await configured({}, extensions)
+		await expect(engine.prepare()).rejects.toMatchObject({ code: "extension" })
 	}
 })
 
-test("configuration rejects duplicate extension entries and extensions on syntax-only rules", async () => {
-	for (const association of [
-		{
-			files: ["data/**"],
-			schema: "schema.json",
-			extensions: [schemars, schemars],
-		},
-		{ files: ["data/**"], schema: null, extensions: [schemars] },
-	]) {
-		const { root } = await setup()
-		const file = await put(root, "invalid.config.json", {
-			associations: [association],
-		})
-		await expect(loadProject(file)).rejects.toMatchObject({ code: "config" })
-	}
-})
-
-test("Renovate's annotation is an independent opt-in extension", async () => {
+test("Renovate metadata is independently opted into", async () => {
 	const schema = {
 		"x-renovate-version": "44.132.2",
 		type: "integer",
 		minimum: 1,
 	}
-	const plain = await setup(schema)
+	const plain = await configured(schema)
 	expect((await plain.engine.validate(plain.file, "1")).failures[0]?.code).toBe(
 		"schema",
 	)
-	const enabled = await setup(schema, config(["renovate"]))
+	const enabled = await configured(schema, [renovate()])
 	expect(await enabled.engine.validate(enabled.file, "1")).toMatchObject({
 		failures: [],
 		diagnostics: [],
@@ -280,54 +274,51 @@ test("Renovate's annotation is an independent opt-in extension", async () => {
 	).toBe("schema/minimum")
 })
 
-test("LSP explains missing extensions and refreshes diagnostics and hints after an unsaved opt-in", async () => {
-	const { root, uri, configPath } = await setup(
-		{
-			type: "object",
-			properties: { limit: { ...uint, description: "Configured limit" } },
-		},
-		config(),
-	)
+test("LSP displays extension guidance and applies a saved config's imported implementation", async () => {
+	const { root, uri, configPath } = await setup({
+		type: "object",
+		properties: { limit: { ...uint, description: "Configured limit" } },
+	})
 	const client = await lspClient([root])
 	await client.open(uri, '{"limit":1}')
-	const missing = await client.wait(uri, 1)
-	expect(missing.diagnostics).toMatchObject([
-		{
-			code: "extension-required",
-			message: expect.stringContaining('Add "schemars@0.8.22" to "extensions"'),
-		},
-	])
-	const count = client.notifications.length
-	await client.open(
-		pathToFileURL(configPath).href,
-		JSON.stringify(config([schemars])),
+	expect((await client.wait(uri, 1)).diagnostics[0]?.message).toContain(
+		'schemars({ version: "0.8.22" })',
 	)
-	expect((await client.wait(uri, 1, count)).diagnostics).toEqual([])
-	const hover = await client.request("textDocument/hover", uri, {
-		line: 0,
-		character: 3,
+	const source = configSource({
+		files: ["data/**"],
+		associations: [
+			{
+				files: ["data/**"],
+				schema: "schema.json",
+				extensions: ["schemars@0.8.22"],
+			},
+		],
 	})
-	expect(JSON.stringify(hover)).toContain("Configured limit")
-	const changed = client.notifications.length
-	await client.change(
-		pathToFileURL(configPath).href,
-		JSON.stringify(config()),
-		2,
-	)
-	expect((await client.wait(uri, 1, changed)).diagnostics[0]?.code).toBe(
-		"extension-required",
-	)
+	await put(root, "correctly.config.ts", source)
+	const count = client.notifications.length
+	await client.connection.sendNotification("workspace/didChangeWatchedFiles", {
+		changes: [{ uri: pathToFileURL(configPath).href, type: 2 }],
+	})
+	expect((await client.wait(uri, 1, count)).diagnostics).toEqual([])
+	expect(
+		JSON.stringify(
+			await client.request("textDocument/hover", uri, {
+				line: 0,
+				character: 3,
+			}),
+		),
+	).toContain("Configured limit")
 })
 
-test("a fetched reference requires an assertion and keeps its own source URI", async () => {
-	const { project, file } = await setup({
-		$ref: "https://example.test/schema.json",
-	})
-	const engine = new Engine(project, {
+test("external and embedded references retain the source URI and pointer", async () => {
+	const remote = await setup({ $ref: "https://example.test/schema.json" })
+	const engine = new Engine(remote.project, {
 		fetch: async () =>
 			new Response(JSON.stringify({ type: "string", format: "company-id" })),
 	})
-	expect((await engine.validate(file, '"value"')).failures).toMatchObject([
+	expect(
+		(await engine.validate(remote.file, '"value"')).failures,
+	).toMatchObject([
 		{
 			code: "extension-required",
 			details: {
@@ -336,41 +327,35 @@ test("a fetched reference requires an assertion and keeps its own source URI", a
 			},
 		},
 	])
-})
-
-test("embedded schema identifiers retain pointers in the retrieved resource", async () => {
-	const { project, root, file } = await setup({
-		$ref: "https://example.test/embedded",
-	})
-	await put(root, "container.json", {
+	const local = await setup({ $ref: "https://example.test/embedded" })
+	await put(local.root, "container.json", {
 		definitions: { child: { $id: "https://example.test/embedded", ...uint } },
 	})
-	const engine = new Engine(project)
-	await engine.store.load(pathToFileURL(path.join(root, "container.json")).href)
-	expect((await engine.validate(file, "1")).failures).toMatchObject([
+	local.project.config.associations.push({
+		files: ["unused/**"],
+		validate: ajv({ schema: "container.json", extensions: [extension()] }),
+	})
+	expect(
+		(await new Engine(local.project).validate(local.file, "1")).failures,
+	).toMatchObject([
 		{
 			code: "extension-required",
 			details: {
-				schemaUri: pathToFileURL(path.join(root, "container.json")).href,
+				schemaUri: pathToFileURL(path.join(local.root, "container.json")).href,
 				schemaPointer: "/definitions/child/format",
 			},
 		},
 	])
 })
 
-test("a misbehaving custom validator cannot pass through a truthy non-boolean result", async () => {
-	const { project, file } = await setup(
-		{ type: "string", format: "custom" },
-		config(["custom@1"]),
-	)
+test("a truthy non-boolean assertion cannot silently pass", async () => {
 	const validate = (() => ({ valid: false })) as unknown as (
 		value: string,
 	) => boolean
-	const engine = new Engine(project, {
-		extensions: [
-			{ id: "custom@1", formats: { custom: { type: "string", validate } } },
-		],
-	})
+	const { engine, file } = await configured(
+		{ type: "string", format: "custom" },
+		[{ id: "custom", formats: { custom: { type: "string", validate } } }],
+	)
 	expect((await engine.validate(file, '"value"')).failures).toMatchObject([
 		{ code: "extension", message: expect.stringContaining("non-boolean") },
 	])

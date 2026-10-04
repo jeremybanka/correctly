@@ -1,13 +1,13 @@
 import { readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { Ajv } from "ajv"
+import { cli } from "comline"
 import picomatch from "picomatch"
-import configSchema from "./config.schema.json" with { type: "json" }
-import { parseDocument } from "./parse.ts"
-import { CorrectlyError, type Association, type Mode } from "./types.ts"
+import type { Parser, Validator } from "./adapters.ts"
+import { defaultParser } from "./parsers.ts"
+import { CorrectlyError, type Association } from "./types.ts"
 
-export const CONFIG_NAME = "correctly.config.json"
+export const CONFIG_NAME = "correctly.config.ts"
 export const DEFAULT_EXCLUDES = [
 	"**/node_modules/**",
 	"**/.git/**",
@@ -15,23 +15,23 @@ export const DEFAULT_EXCLUDES = [
 	"**/artifacts/**",
 	"**/.correctly-cache/**",
 ]
+export type RemoteOptions = {
+	offline?: boolean
+	cacheDir?: string
+	timeoutMs?: number
+	maxBytes?: number
+	maxRequests?: number
+}
 export type ProjectConfig = {
 	files?: string[]
 	exclude?: string[]
 	associations: {
 		name?: string
 		files: string[]
-		schema: string | null
-		mode?: Mode
-		extensions?: string[]
+		parse?: Parser
+		validate: Validator | null
 	}[]
-	remote?: {
-		offline?: boolean
-		cacheDir?: string
-		timeoutMs?: number
-		maxBytes?: number
-		maxRequests?: number
-	}
+	remote?: RemoteOptions
 }
 export type Project = {
 	configPath: string
@@ -40,10 +40,144 @@ export type Project = {
 }
 export type ReadText = (uri: string) => Promise<string>
 export const readText: ReadText = (uri) => readFile(fileURLToPath(uri), "utf8")
-const validateConfig = new Ajv({ allErrors: true, strict: true }).compile(
-	configSchema,
-)
 
+function object(
+	value: unknown,
+	location: string,
+	keys?: string[],
+): asserts value is Record<string, unknown> {
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		throw new CorrectlyError("config", `${location} must be an object`)
+	if (keys)
+		for (const key of Object.keys(value))
+			if (!keys.includes(key))
+				throw new CorrectlyError("config", `Unknown option ${location}.${key}`)
+}
+function string(value: unknown, location: string): asserts value is string {
+	if (typeof value !== "string" || !value.length)
+		throw new CorrectlyError("config", `${location} must be a nonempty string`)
+}
+function patterns(value: unknown, location: string): void {
+	if (!Array.isArray(value) || !value.length)
+		throw new CorrectlyError(
+			"config",
+			`${location} must be a nonempty array of relative patterns`,
+		)
+	for (const item of value) {
+		string(item, location)
+		if (/^(?:[!/]|[A-Za-z]:)|(?:^|\/)\.\.(?:\/|$)|\\/.test(item))
+			throw new CorrectlyError(
+				"config",
+				`${location}: use relative forward-slash patterns without '..' or leading '!': ${item}`,
+			)
+	}
+}
+export function defineConfig<T extends ProjectConfig>(config: T): T {
+	validateConfig(config)
+	return config
+}
+export function validateConfig(value: unknown): ProjectConfig {
+	object(value, "config", ["files", "exclude", "associations", "remote"])
+	for (const key of ["files", "exclude"])
+		if (value[key] !== undefined) patterns(value[key], key)
+	if (!Array.isArray(value.associations))
+		throw new CorrectlyError("config", "associations must be an array")
+	for (const [index, rule] of value.associations.entries()) {
+		const at = `associations[${index}]`
+		object(rule, at, ["name", "files", "parse", "validate"])
+		patterns(rule.files, `${at}.files`)
+		if (rule.name !== undefined) string(rule.name, `${at}.name`)
+		if (rule.parse !== undefined) {
+			object(rule.parse, `${at}.parse`)
+			string(rule.parse.id, `${at}.parse.id`)
+			string(rule.parse.valueModel, `${at}.parse.valueModel`)
+			if (typeof rule.parse.parse !== "function")
+				throw new CorrectlyError(
+					"config",
+					`${at}.parse must be a parser adapter`,
+				)
+			if (
+				rule.parse.editorLanguage !== undefined &&
+				rule.parse.editorLanguage !== "json" &&
+				rule.parse.editorLanguage !== "jsonc"
+			)
+				throw new CorrectlyError(
+					"config",
+					`${at}.parse.editorLanguage must be json or jsonc`,
+				)
+		}
+		if (rule.validate !== null) {
+			object(rule.validate, `${at}.validate`)
+			string(rule.validate.id, `${at}.validate.id`)
+			if (
+				typeof rule.validate.prepare !== "function" ||
+				!Array.isArray(rule.validate.accepts) ||
+				!rule.validate.accepts.length ||
+				rule.validate.accepts.some((v: unknown) => typeof v !== "string" || !v)
+			)
+				throw new CorrectlyError(
+					"config",
+					`${at}.validate must be a validator adapter with accepted value models`,
+				)
+			if (
+				rule.validate.register !== undefined &&
+				typeof rule.validate.register !== "function"
+			)
+				throw new CorrectlyError(
+					"config",
+					`${at}.validate.register must be a function`,
+				)
+			if (rule.validate.extensions !== undefined) {
+				if (!Array.isArray(rule.validate.extensions))
+					throw new CorrectlyError(
+						"config",
+						`${at}.validate.extensions must be an array`,
+					)
+				for (const extension of rule.validate.extensions) {
+					object(extension, `${at}.validate.extensions[]`)
+					string(extension.id, `${at}.validate.extensions[].id`)
+				}
+			}
+			if (rule.validate.schema !== undefined)
+				string(rule.validate.schema, `${at}.validate.schema`)
+		}
+	}
+	if (value.remote !== undefined) {
+		object(value.remote, "remote", [
+			"offline",
+			"cacheDir",
+			"timeoutMs",
+			"maxBytes",
+			"maxRequests",
+		])
+		if (
+			value.remote.offline !== undefined &&
+			typeof value.remote.offline !== "boolean"
+		)
+			throw new CorrectlyError("config", "remote.offline must be a boolean")
+		if (value.remote.cacheDir !== undefined)
+			string(value.remote.cacheDir, "remote.cacheDir")
+		for (const [key, max] of [
+			["timeoutMs", 60000],
+			["maxBytes", 16777216],
+			["maxRequests", 256],
+		] as const) {
+			const number = value.remote[key]
+			if (
+				number !== undefined &&
+				(typeof number !== "number" ||
+					!Number.isInteger(number) ||
+					number < 1 ||
+					number > max)
+			)
+				throw new CorrectlyError(
+					"config",
+					`remote.${key} must be an integer between 1 and ${max}`,
+				)
+		}
+	}
+	return value as ProjectConfig
+}
 export function contains(root: string, file: string): boolean {
 	const relative = path.relative(root, file)
 	return (
@@ -52,21 +186,17 @@ export function contains(root: string, file: string): boolean {
 		!path.isAbsolute(relative)
 	)
 }
-
 export async function discoverConfig(
 	start: string,
 	boundary?: string,
-	virtualFiles: ReadonlySet<string> = new Set(),
 ): Promise<string> {
 	let directory = path.resolve(start)
 	if (boundary && !contains(boundary, directory))
 		throw new CorrectlyError("config", `Path is outside workspace ${boundary}`)
 	while (true) {
 		const candidate = path.join(directory, CONFIG_NAME)
-		if (virtualFiles.has(candidate)) return candidate
 		try {
-			const info = await stat(candidate)
-			if (info.isFile()) return candidate
+			if ((await stat(candidate)).isFile()) return candidate
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
 		}
@@ -79,48 +209,46 @@ export async function discoverConfig(
 		`No ${CONFIG_NAME} found from ${start}${boundary ? ` within ${boundary}` : ""}`,
 	)
 }
-
-export async function loadProject(
-	configPath: string,
-	read: ReadText = readText,
-): Promise<Project> {
+/** Comline owns module loading and invokes our runtime contract validation. */
+export async function loadProject(configPath: string): Promise<Project> {
 	const resolved = path.resolve(configPath)
-	let text: string
 	try {
-		text = await read(pathToFileURL(resolved).href)
+		if (path.extname(resolved) !== ".ts")
+			throw new Error("Correctly configuration must be a TypeScript .ts module")
+		if (!(await stat(resolved)).isFile())
+			throw new Error("Configuration must be a file")
+		const schema = {
+			"~standard": {
+				version: 1 as const,
+				vendor: "correctly",
+				validate: (value: unknown) => ({ value: validateConfig(value) }),
+				jsonSchema: {
+					input: () => ({ type: "object" }),
+					output: () => ({ type: "object" }),
+				},
+			},
+		}
+		const parse = cli({
+			cliName: "correctly",
+			discoverConfigPath: () => resolved,
+			routeOptions: {
+				"": {
+					description: "Correctly configuration",
+					optionsSchema: schema,
+					optionConfigs: {},
+				},
+			},
+		})
+		const config = validateConfig(
+			parse([process.execPath, "correctly"]).inputs.opts,
+		)
+		return { configPath: resolved, root: path.dirname(resolved), config }
 	} catch (error) {
 		throw new CorrectlyError(
 			"config",
-			`Cannot read configuration ${resolved}: ${String(error)}`,
+			`Cannot load ${resolved}: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
-	const parsed = parseDocument(text, "json")
-	if (parsed.diagnostics.length) {
-		const d = parsed.diagnostics[0]!
-		throw new CorrectlyError(
-			"config",
-			`${resolved}:${d.range.start.line + 1}:${d.range.start.character + 1}: ${d.message}`,
-		)
-	}
-	if (!validateConfig(parsed.value)) {
-		throw new CorrectlyError(
-			"config",
-			`${resolved}: ${validateConfig.errors?.map((e) => `${e.instancePath || "/"} ${e.message}`).join("; ")}`,
-		)
-	}
-	const config = parsed.value as ProjectConfig
-	for (const pattern of [
-		...(config.files ?? []),
-		...(config.exclude ?? []),
-		...config.associations.flatMap((a) => a.files),
-	]) {
-		if (pattern.includes("\\"))
-			throw new CorrectlyError(
-				"config",
-				`Use forward slashes in patterns: ${pattern}`,
-			)
-	}
-	return { configPath: resolved, root: path.dirname(resolved), config }
 }
 
 export function schemaUri(value: string, root: string): string {
@@ -184,19 +312,26 @@ export function associationFor(
 		index--
 	) {
 		const rule = project.config.associations[index]!
-		if (picomatch(rule.files, { dot: true })(relative)) {
+		if (picomatch(rule.files, { dot: true })(relative))
 			return {
 				index,
 				name: rule.name ?? `association ${index + 1}`,
-				schema:
-					rule.schema === null ? null : schemaUri(rule.schema, project.root),
-				mode: rule.mode ?? modeFor(file),
-				...(rule.extensions ? { extensions: rule.extensions } : {}),
+				mode: (rule.parse ?? defaultParser(file)).id,
+				schema: rule.validate?.schema
+					? schemaUri(rule.validate.schema, project.root)
+					: null,
+				validator: rule.validate?.id ?? null,
+				...(rule.validate?.extensions
+					? {
+							extensions: rule.validate.extensions.map(
+								(extension) => extension.id,
+							),
+						}
+					: {}),
 			}
-		}
 	}
 	return null
 }
-export function modeFor(file: string): Mode {
-	return path.extname(file).toLowerCase() === ".jsonc" ? "jsonc" : "json"
+export function modeFor(file: string): string {
+	return defaultParser(file).id
 }

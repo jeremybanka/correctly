@@ -9,4 +9,5 @@ export {
 	type DiagnosticView,
 } from "./diagnostics.ts"
 
-export { builtinExtensions, type SchemaExtension } from "./extensions.ts"
+export * from "./adapters.ts"
+export * from "./parsers.ts"

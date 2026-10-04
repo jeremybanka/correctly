@@ -92,7 +92,11 @@ export function startServer() {
 				?.dynamicRegistration ?? false
 		return {
 			capabilities: {
-				textDocumentSync: TextDocumentSyncKind.Incremental,
+				textDocumentSync: {
+					openClose: true,
+					change: TextDocumentSyncKind.Incremental,
+					save: { includeText: false },
+				},
 				completionProvider: { triggerCharacters: ['"', ":"] },
 				hoverProvider: true,
 				workspace: {
@@ -106,7 +110,7 @@ export function startServer() {
 		if (dynamicWatch)
 			void connection.client
 				.register(DidChangeWatchedFilesNotification.type, {
-					watchers: [{ globPattern: "**/*.{json,jsonc}" }],
+					watchers: [{ globPattern: "**/*" }],
 				})
 				.catch((error: unknown) => connection.console.error(String(error)))
 		connection.workspace.onDidChangeWorkspaceFolders((event) => {
@@ -170,6 +174,9 @@ export function startServer() {
 		await connection.sendDiagnostics({ uri: document.uri, diagnostics: [] })
 		if (document.uri.startsWith("file:") && workspace.close(document.uri))
 			scheduleAll()
+	})
+	documents.onDidSave(({ document }) => {
+		if (workspace.resourceChanged(document.uri)) refresh()
 	})
 	connection.onDidChangeWatchedFiles((params) => {
 		// Cache writes and unrelated JSON files must not trigger schema reloads.

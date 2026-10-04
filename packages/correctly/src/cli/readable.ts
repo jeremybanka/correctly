@@ -214,7 +214,9 @@ function fileSection(
 				? format
 				: schema
 					? `${format} against ${association.name} (${displaySchema(cwd, schema)})`
-					: `${format} syntax only (${association ? `association: ${association.name}` : "no schema association"})`
+					: association?.validator
+						? `${format} validated by ${association.validator}`
+						: `${format} syntax only (${association ? `association: ${association.name}` : "no schema association"})`
 		header += `  ${styler.dim(`·  ${description}`)}`
 	}
 	const output = [header]
@@ -305,7 +307,7 @@ export function readableReport(
 					? styler.warning
 					: styler.success)(status),
 			"",
-			`${s.checked} checked, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
+			`${s.checked} checked, ${s.validated} validated, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
 		].join("\n"),
 	)
 	return output.join("\n\n")

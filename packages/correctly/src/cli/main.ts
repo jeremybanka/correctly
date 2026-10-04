@@ -6,7 +6,7 @@ import { failure, type Report } from "../core/types.ts"
 const HELP = `correctly check [files...] [--config path] [--offline] [--format readable|json]
 correctly-lsp --stdio
 
-Validate JSON/JSONC using associations in correctly.config.json.
+Validate JSON/JSONC using associations in correctly.config.ts.
 Exit 0: valid; 1: document errors; 2: configuration, schema, or execution errors.
 Formatting does not affect validation. See the package guide for configuration.
 `
@@ -59,12 +59,13 @@ export async function run(
 		}
 	} catch (error) {
 		const report: Report = {
-			reportVersion: 1,
+			reportVersion: 2,
 			config: null,
 			files: [],
 			failures: [failure(error)],
 			summary: {
 				checked: 0,
+				validated: 0,
 				schemaCovered: 0,
 				syntaxOnly: 0,
 				invalid: 0,

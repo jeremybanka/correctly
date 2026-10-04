@@ -6,8 +6,8 @@ import {
 } from "vscode-json-languageservice"
 import type { TextDocument } from "vscode-languageserver-textdocument"
 import { fileURLToPath } from "node:url"
-import { associationFor, isIncluded } from "../core/config.ts"
-import { extensionKey } from "../core/extensions.ts"
+
+import type { ProjectSession } from "../runtime/session.ts"
 import type { Engine } from "../core/engine.ts"
 
 // Only the schema-selection accessor is hidden. The original AST (including
@@ -32,11 +32,10 @@ export class Hints {
 		document: TextDocument,
 	): Promise<LanguageService | undefined> {
 		const file = fileURLToPath(document.uri)
-		if (!isIncluded(engine.project, file)) return undefined
-		const association = associationFor(engine.project, file)
-		if (!association?.schema) return undefined
-		await engine.validator(association.schema, association.extensions)
-		const key = extensionKey(association.schema, association.extensions)
+		const editor = await engine.editor(file)
+		if (!editor) return undefined
+		const key = String(editor.association)
+
 		let services = this.services.get(engine)
 		if (!services) {
 			services = new Map()
@@ -45,8 +44,7 @@ export class Hints {
 		let service = services.get(key)
 		if (!service) {
 			service = getLanguageService({
-				schemaRequestService: async (uri) =>
-					JSON.stringify((await engine.store.load(uri)).schema),
+				schemaRequestService: (uri) => editor.support.readSchema(uri),
 				workspaceContext: {
 					resolveRelativePath: (relative, resource) =>
 						new URL(relative, resource).href,
@@ -55,13 +53,18 @@ export class Hints {
 			// A per-association service prevents overlapping rules being combined.
 			service.configure({
 				validate: false,
-				schemas: [{ uri: association.schema, fileMatch: ["*"] }],
+				schemas: [{ uri: editor.support.uri, fileMatch: ["*"] }],
 			})
 			services.set(key, service)
 		}
 		return service
 	}
-	async complete(engine: Engine, document: TextDocument, position: Position) {
+	async complete(
+		engine: Engine | ProjectSession,
+		document: TextDocument,
+		position: Position,
+	) {
+		if (!("editor" in engine)) return engine.complete(document, position)
 		const service = await this.service(engine, document)
 		return service
 			? await service.doComplete(
@@ -71,7 +74,12 @@ export class Hints {
 				)
 			: { isIncomplete: false, items: [] }
 	}
-	async hover(engine: Engine, document: TextDocument, position: Position) {
+	async hover(
+		engine: Engine | ProjectSession,
+		document: TextDocument,
+		position: Position,
+	) {
+		if (!("editor" in engine)) return engine.hover(document, position)
 		const service = await this.service(engine, document)
 		return service
 			? await service.doHover(

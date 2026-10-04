@@ -1,293 +1,147 @@
-import {
-	Ajv,
-	type ErrorObject,
-	type ValidateFunction,
-	type SchemaObject,
-} from "ajv"
-import { Ajv2020 } from "ajv/dist/2020.js"
-import addFormats from "ajv-formats"
-import {
-	associationFor,
-	isIncluded,
-	modeFor,
-	schemaUri,
-	type Project,
-} from "./config.ts"
-import {
-	diagnostic,
-	parseDocument,
-	pointer,
-	type ParsedDocument,
-} from "./parse.ts"
-import { DIALECTS, SchemaStore, type StoreOptions } from "./schemas.ts"
-import { validationContexts } from "./diagnostics.ts"
-import {
-	builtinExtensions,
-	extensionKey,
-	installExtensions,
-	assertFormats,
-	type SchemaExtension,
-} from "./extensions.ts"
-import {
-	CorrectlyError,
-	failure,
-	type Diagnostic,
-	type FileResult,
-} from "./types.ts"
-
-const ANNOTATIONS = [
-	"markdownDescription",
-	"enumDescriptions",
-	"markdownEnumDescriptions",
-	"defaultSnippets",
-	"errorMessage",
-	"patternErrorMessage",
-	"deprecationMessage",
-	"suggestSortText",
-	"doNotSuggest",
-	"allowComments",
-	"allowTrailingCommas",
-	"deprecated",
-	"$vocabulary",
-]
-
-function registerRootAnchors(ajv: Ajv, schema: unknown, uri: string) {
-	if (typeof schema !== "object" || schema === null) return
-	const object = schema as SchemaObject
-	for (const anchor of [object.$anchor, object.$dynamicAnchor]) {
-		if (typeof anchor === "string")
-			ajv.refs[new URL(`#${anchor}`, object.$id ?? uri).href] =
-				object.$id ?? uri
-	}
-}
-
-function validationMessage(error: ErrorObject): string {
-	if (error.keyword === "anyOf")
-		return "must match at least one alternative; none matched"
-	if (
-		error.keyword === "if" &&
-		["then", "else"].includes(error.params.failingKeyword as string)
-	)
-		return `must satisfy the ${error.params.failingKeyword} branch of the conditional schema`
-	if (error.keyword === "uniqueItems") {
-		const { i, j } = error.params
-		if (Number.isInteger(i) && Number.isInteger(j))
-			return `duplicates item at ${error.instancePath}${pointer([Math.min(i, j)])}; array items must be unique`
-	}
-	if (error.keyword === "enum" && Array.isArray(error.params.allowedValues))
-		return `must be one of: ${error.params.allowedValues.map((value: unknown) => JSON.stringify(value)).join(", ")}`
-	if (error.keyword === "const" && Object.hasOwn(error.params, "allowedValue"))
-		return `must equal ${JSON.stringify(error.params.allowedValue)}`
-	if (error.keyword === "oneOf") {
-		if (error.params.passingSchemas === null)
-			return "must match exactly one alternative; none matched"
-		if (Array.isArray(error.params.passingSchemas))
-			return `must match exactly one alternative; multiple matched (alternatives ${error.params.passingSchemas.map((index: number) => index + 1).join(", ")})`
-	}
-	return error.message ?? "Schema violation"
-}
-
-function validationDiagnostic(
-	text: string,
-	parsed: ParsedDocument,
-	error: ErrorObject,
-): Diagnostic {
-	let jsonPointer = error.instancePath
-	if (
-		error.keyword === "uniqueItems" &&
-		Number.isInteger(error.params.i) &&
-		Number.isInteger(error.params.j)
-	)
-		jsonPointer += pointer([Math.max(error.params.i, error.params.j)])
-	const property: unknown =
-		error.params.additionalProperty ??
-		error.params.unevaluatedProperty ??
-		error.params.missingProperty ??
-		error.params.propertyName ??
-		error.propertyName
-	if (typeof property === "string") jsonPointer += pointer([property])
-	const node = parsed.locate(
-		jsonPointer,
-		error.keyword === "additionalProperties" ||
-			error.keyword === "unevaluatedProperties" ||
-			error.keyword === "propertyNames" ||
-			typeof error.propertyName === "string",
-	)
-	const rangeNode =
-		error.keyword === "required" && error.propertyName === undefined
-			? parsed.locate(error.instancePath)
-			: node
-	const length =
-		error.keyword === "required" && error.propertyName === undefined
-			? 1
-			: rangeNode?.length
-	return diagnostic(
-		text,
-		`schema/${error.keyword}`,
-		`${jsonPointer || "/"}: ${validationMessage(error)}`,
-		jsonPointer,
-		rangeNode?.offset ?? 0,
-		length ?? 1,
-	)
-}
+import { associationFor, isIncluded, readText, type Project } from "./config.ts"
+import { defaultParser } from "./parsers.ts"
+import { CorrectlyError, failure, type FileResult } from "./types.ts"
+import type { StoreOptions } from "./schemas.ts"
+import type {
+	PreparedValidator,
+	ValidationContext,
+	Validator,
+} from "./adapters.ts"
 
 export type EngineOptions = StoreOptions & {
-	extensions?: readonly SchemaExtension[]
+	onDependency?: (uri: string) => void
 }
-
 export class Engine {
 	readonly project: Project
-	readonly store: SchemaStore
-	private readonly compiled = new Map<string, Promise<ValidateFunction>>()
-	private readonly extensions: readonly SchemaExtension[]
+	readonly context: ValidationContext
+	private readonly prepared = new Map<Validator, Promise<PreparedValidator>>()
+	private registration: Promise<void> | undefined
 	constructor(project: Project, options: EngineOptions = {}) {
 		this.project = project
-		this.extensions = [...builtinExtensions, ...(options.extensions ?? [])]
-		this.store = new SchemaStore(project, options)
-	}
-
-	validator(
-		uri: string,
-		extensions: readonly string[] = [],
-	): Promise<ValidateFunction> {
-		const selected = [...new Set(extensions)].sort()
-		const key = extensionKey(uri, selected)
-		let compiled = this.compiled.get(key)
-		if (!compiled) {
-			compiled = this.compile(uri, selected)
-			this.compiled.set(key, compiled)
+		const watch = (uri: string) => options.onDependency?.(uri)
+		this.context = {
+			root: project.root,
+			configPath: project.configPath,
+			remote: {
+				...project.config.remote,
+				...(options.offline === undefined ? {} : { offline: options.offline }),
+			},
+			read: async (uri) => {
+				watch(uri)
+				return (options.read ?? readText)(uri)
+			},
+			...(options.fetch ? { fetch: options.fetch } : {}),
+			...(options.signal ? { signal: options.signal } : {}),
+			watch,
+			services: new Map(),
 		}
-		return compiled
 	}
-
-	private async compile(
-		uri: string,
-		extensions: readonly string[],
-	): Promise<ValidateFunction> {
-		try {
-			const resource = await this.store.load(uri)
-			const options = {
-				allErrors: true,
-				strictSchema: true,
-				strictTypes: false,
-				strictTuples: false,
-				strictRequired: false,
-				coerceTypes: false,
-				useDefaults: false,
-				removeAdditional: false,
-				validateSchema: true,
-				loadSchema: async (ref: string) => {
-					const loaded = await this.store.load(ref, resource.dialect)
-					if (loaded.dialect !== resource.dialect)
-						throw new CorrectlyError(
-							"unsupported-dialect",
-							`Mixed schema dialects: ${uri} references ${ref}`,
-						)
-					assertFormats(
-						ajv,
-						loaded.schema,
-						loaded.uri,
-						this.extensions,
-						loaded.pointer,
+	private register(): Promise<void> {
+		return (this.registration ??= (async () => {
+			for (const rule of this.project.config.associations)
+				await rule.validate?.register?.(this.context)
+		})())
+	}
+	private validator(validator: Validator): Promise<PreparedValidator> {
+		let prepared = this.prepared.get(validator)
+		if (!prepared) {
+			prepared = (async () => {
+				await this.register()
+				const result = await validator.prepare(this.context)
+				if (!result || typeof result.validate !== "function")
+					throw new CorrectlyError(
+						"validator",
+						`Validator ${validator.id} did not prepare a validate function`,
 					)
-					registerRootAnchors(ajv, loaded.schema, loaded.uri)
-					return loaded.schema as SchemaObject
-				},
-			}
-			const ajv =
-				resource.dialect === "2020-12" ? new Ajv2020(options) : new Ajv(options)
-			// CommonJS package exports retain a callable default at runtime.
-			const formats = addFormats as unknown as (instance: Ajv) => void
-			formats(ajv)
-			// ajv-formats also ships OpenAPI numeric names. Their width semantics
-			// belong to an explicitly selected extension, not the baseline.
-			for (const name of ["int32", "int64", "float", "double"])
-				delete ajv.formats[name]
-			for (const keyword of ANNOTATIONS)
-				if (!ajv.RULES.keywords[keyword])
-					ajv.addKeyword({ keyword, valid: true })
-			// Ajv indexes plain anchors during reference resolution, but does not
-			// register the annotation keyword in its strict vocabulary.
-			if (resource.dialect === "2020-12")
-				ajv.addKeyword({
-					keyword: "$anchor",
-					schemaType: "string",
-					valid: true,
-				})
-			installExtensions(ajv, extensions, this.extensions)
-			assertFormats(
-				ajv,
-				resource.schema,
-				resource.uri,
-				this.extensions,
-				resource.pointer,
-			)
-			ajv.addSchema(resource.schema, resource.uri)
-			registerRootAnchors(ajv, resource.schema, resource.uri)
-			const validate = await ajv.compileAsync({
-				$schema: DIALECTS[resource.dialect],
-				$ref: uri,
-			})
-			return validate as ValidateFunction
-		} catch (error) {
-			if (error instanceof CorrectlyError) throw error
-			throw new CorrectlyError(
-				"schema",
-				`Cannot compile schema ${uri}: ${error instanceof Error ? error.message : String(error)}`,
-			)
+				return result
+			})()
+			this.prepared.set(validator, prepared)
 		}
+		return prepared
 	}
-
 	async prepare(): Promise<void> {
-		// Register configured resources before compiling references to their IDs.
-		for (const association of this.project.config.associations) {
-			if (association.schema !== null)
-				await this.store.load(schemaUri(association.schema, this.project.root))
-		}
-		for (const association of this.project.config.associations) {
-			if (association.schema !== null)
-				await this.validator(
-					schemaUri(association.schema, this.project.root),
-					association.extensions,
-				)
+		await this.register()
+		for (const rule of this.project.config.associations) {
+			if (rule.validate) {
+				if (!rule.validate.accepts.includes(rule.parse?.valueModel ?? "json"))
+					throw new CorrectlyError(
+						"adapter-incompatible",
+						`Parser ${rule.parse?.id ?? "json"} produces ${rule.parse?.valueModel ?? "json"}; validator ${rule.validate.id} accepts ${rule.validate.accepts.join(", ")}`,
+					)
+				await this.validator(rule.validate)
+			}
 		}
 	}
-
+	async editor(file: string) {
+		if (!isIncluded(this.project, file)) return undefined
+		const association = associationFor(this.project, file)
+		if (!association) return undefined
+		const rule = this.project.config.associations[association.index]!
+		const parser = rule.parse ?? defaultParser(file)
+		if (!rule.validate || !parser.editorLanguage) return undefined
+		if (!rule.validate.accepts.includes(parser.valueModel)) return undefined
+		const prepared = await this.validator(rule.validate)
+		return prepared.editor
+			? {
+					support: prepared.editor,
+					language: parser.editorLanguage,
+					association: association.index,
+				}
+			: undefined
+	}
 	async validate(file: string, text: string): Promise<FileResult> {
 		const association = associationFor(this.project, file)
-		const mode = association?.mode ?? modeFor(file)
+		const rule = association
+			? this.project.config.associations[association.index]
+			: undefined
+		const parser = rule?.parse ?? defaultParser(file)
 		const result: FileResult = {
 			file,
-			mode,
+			mode: parser.id,
 			association,
 			coverage: "excluded",
 			diagnostics: [],
 			failures: [],
 		}
 		if (!isIncluded(this.project, file)) return result
-		result.coverage = association?.schema ? "schema" : "syntax-only"
-		const parsed = parseDocument(text, mode)
-		result.diagnostics.push(...parsed.diagnostics)
-		if (association?.schema) {
-			try {
-				const validate = await this.validator(
-					association.schema,
-					association.extensions,
-				)
-				if (parsed.diagnostics.length === 0 && !validate(parsed.value)) {
-					result.diagnostics.push(
-						...validationContexts(
-							validate.errors ?? [],
-							(validate.errors ?? []).map((e) =>
-								validationDiagnostic(text, parsed, e),
-							),
-						),
+		result.coverage = rule?.validate
+			? association?.schema
+				? "schema"
+				: "validated"
+			: "syntax-only"
+		try {
+			this.context.signal?.throwIfAborted()
+			const parsed = await parser.parse(text, {
+				file,
+				...(this.context.signal ? { signal: this.context.signal } : {}),
+			})
+			result.diagnostics.push(...parsed.diagnostics)
+			if (rule?.validate) {
+				if (!rule.validate.accepts.includes(parser.valueModel))
+					throw new CorrectlyError(
+						"adapter-incompatible",
+						`Parser ${parser.id} produces ${parser.valueModel}; validator ${rule.validate.id} accepts ${rule.validate.accepts.join(", ")}`,
 					)
-				}
-			} catch (error) {
-				result.failures.push(failure(error, file))
+				const validator = await this.validator(rule.validate)
+				if (!parsed.diagnostics.length)
+					result.diagnostics.push(
+						...(await validator.validate({
+							file,
+							text,
+							parsed,
+							...(this.context.signal ? { signal: this.context.signal } : {}),
+						})),
+					)
 			}
+		} catch (error) {
+			result.failures.push(failure(error, file))
 		}
 		return result
+	}
+	async dispose(): Promise<void> {
+		for (const prepared of this.prepared.values()) {
+			const result = await prepared.catch(() => undefined)
+			await result?.dispose?.()
+		}
 	}
 }

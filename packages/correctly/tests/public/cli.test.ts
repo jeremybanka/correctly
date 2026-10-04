@@ -21,7 +21,7 @@ test("published check command has stable JSON output and exit statuses without f
 	expect(valid.stderr).toBe("")
 	const report = JSON.parse(valid.stdout) as Report
 	expect(report).toMatchObject({
-		reportVersion: 1,
+		reportVersion: 2,
 		exitCode: 0,
 		summary: { checked: 1, schemaCovered: 1, invalid: 0, failures: 0 },
 	})
@@ -29,7 +29,7 @@ test("published check command has stable JSON output and exit statuses without f
 	expect(
 		spawnSync(process.execPath, [entry, "check"], { cwd: root }).status,
 	).toBe(1)
-	await put(root, "correctly.config.json", {
+	await put(root, "correctly.config.ts", {
 		associations: [{ files: ["**/*.json"], schema: "missing.json" }],
 	})
 	const missing = spawnSync(
@@ -48,7 +48,7 @@ test("explicit config and file paths resolve from cwd; schemas resolve from the 
 	await put(root, "data/test.json", { name: "valid" })
 	const report = await check({
 		cwd: path.join(root, "data"),
-		config: "../correctly.config.json",
+		config: "../correctly.config.ts",
 		files: ["test.json"],
 	})
 	expect(report).toMatchObject({
@@ -102,7 +102,7 @@ test("readable CLI groups files with ordered diagnostics, source ranges, and con
 
 		▲ Check found 4 errors in 2 files
 
-		2 checked, 2 schema-covered, 0 syntax-only, 2 invalid, 0 failures
+		2 checked, 2 validated, 2 schema-covered, 0 syntax-only, 2 invalid, 0 failures
 		"
 	`)
 	const json = spawnSync(
@@ -182,7 +182,7 @@ test("terminal colors follow Lasertag's palette, honor overrides, and leave JSON
 	const valid = invoke({ FORCE_COLOR: "1" })
 	expect(valid.status).toBe(0)
 	expect(valid.stdout).toContain(styled(["bold", "green"], "✓ Check passed"))
-	await put(root, "correctly.config.json", {
+	await put(root, "correctly.config.ts", {
 		associations: [{ files: ["data/**"], schema: "missing.json" }],
 	})
 	const failed = invoke({ FORCE_COLOR: "1" })
@@ -245,7 +245,7 @@ test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF err
 
 		▲ Check found 1 error in 1 file
 
-		1 checked, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
+		1 checked, 1 validated, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
 		"
 	`)
 	await put(root, "data/test.json", '{\n  "name":')
@@ -272,7 +272,7 @@ test("source excerpts align tabs and CRLF, mark duplicate keys, and show EOF err
 
 		▲ Check found 2 errors in 1 file
 
-		1 checked, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
+		1 checked, 1 validated, 1 schema-covered, 0 syntax-only, 1 invalid, 0 failures
 		"
 	`)
 })
@@ -335,7 +335,7 @@ test("real repository configuration fixtures pass and invalid variants fail", as
 			`${schema}.schema.json`,
 			await readFile(new URL(`${schema}.schema.json`, fixtures), "utf8"),
 		)
-	await put(root, "correctly.config.json", {
+	await put(root, "correctly.config.ts", {
 		files: ["data/**/*.json"],
 		associations: [
 			{ files: ["data/*.changesets.json"], schema: "changesets.schema.json" },

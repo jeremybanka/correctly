@@ -1,12 +1,8 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { glob } from "tinyglobby"
-import {
-	discoverConfig,
-	exclusions,
-	isIncluded,
-	loadProject,
-} from "../core/config.ts"
+import { discoverConfig, exclusions, isIncluded } from "../core/config.ts"
+import { ProjectSession } from "../runtime/session.ts"
 import { Engine } from "../core/engine.ts"
 import { failure, type Report } from "../core/types.ts"
 
@@ -17,14 +13,15 @@ export type CheckOptions = {
 	files?: string[]
 	onRead?: (file: string, text: string) => void
 }
-export async function check(options: CheckOptions = {}): Promise<Report> {
+function emptyReport(): Report {
 	const report: Report = {
-		reportVersion: 1,
+		reportVersion: 2,
 		config: null,
 		files: [],
 		failures: [],
 		summary: {
 			checked: 0,
+			validated: 0,
 			schemaCovered: 0,
 			syntaxOnly: 0,
 			invalid: 0,
@@ -32,17 +29,47 @@ export async function check(options: CheckOptions = {}): Promise<Report> {
 		},
 		exitCode: 0,
 	}
+	return report
+}
+export async function check(options: CheckOptions = {}): Promise<Report> {
+	const report = emptyReport()
+	let session: ProjectSession | undefined
 	try {
 		const cwd = path.resolve(options.cwd ?? process.cwd())
 		const configPath = options.config
 			? path.resolve(cwd, options.config)
 			: await discoverConfig(cwd)
 		report.config = configPath
-		const project = await loadProject(configPath)
-		const engine = new Engine(
-			project,
+		session = new ProjectSession(
+			configPath,
 			options.offline === undefined ? {} : { offline: options.offline },
 		)
+		const result = await session.check({
+			cwd,
+			...(options.files ? { files: options.files } : {}),
+			sources: Boolean(options.onRead),
+		})
+		for (const [file, text] of result.sources) options.onRead?.(file, text)
+		return result.report
+	} catch (error) {
+		report.failures.push(failure(error))
+		report.summary.failures = 1
+		report.exitCode = 2
+		return report
+	} finally {
+		await session?.dispose()
+	}
+}
+export async function checkProject(
+	engine: Engine,
+	options: CheckOptions,
+): Promise<Report> {
+	const report = emptyReport()
+	const project = engine.project
+	report.config = project.configPath
+
+	try {
+		const cwd = path.resolve(options.cwd ?? process.cwd())
 		await engine.prepare()
 		const files = options.files?.length
 			? options.files.map((f) => path.resolve(cwd, f))
@@ -69,6 +96,9 @@ export async function check(options: CheckOptions = {}): Promise<Report> {
 	const checked = report.files.filter((f) => f.coverage !== "excluded")
 	report.summary = {
 		checked: checked.length,
+		validated: checked.filter(
+			(f) => f.coverage === "schema" || f.coverage === "validated",
+		).length,
 		schemaCovered: checked.filter((f) => f.coverage === "schema").length,
 		syntaxOnly: checked.filter((f) => f.coverage === "syntax-only").length,
 		invalid: checked.filter((f) => f.diagnostics.length > 0).length,

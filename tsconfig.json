@@ -14,7 +14,21 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"target": "ES2024",
-		"types": []
+		"types": [],
+		"paths": {
+			"correctly": [
+				"./packages/correctly/src/core/index.ts"
+			],
+			"correctly/validators/ajv": [
+				"./packages/correctly/src/validators/ajv.ts"
+			],
+			"correctly/extensions/schemars": [
+				"./packages/correctly/src/extensions/schemars.ts"
+			],
+			"correctly/extensions/renovate": [
+				"./packages/correctly/src/extensions/renovate.ts"
+			]
+		}
 	},
 	"include": ["**/*.ts", "*.d.ts"]
 }

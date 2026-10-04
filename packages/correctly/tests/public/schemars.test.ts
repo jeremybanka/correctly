@@ -1,9 +1,9 @@
 import { expect, test } from "vite-plus/test"
-import { type ProjectConfig } from "../../src/core/index.ts"
+import type { TestConfig } from "./helpers.ts"
 import { setup } from "./helpers.ts"
 import fixture from "./fixtures/schemars/schemas.json" with { type: "json" }
 
-const config: ProjectConfig = {
+const config: TestConfig = {
 	associations: [
 		{
 			files: ["data/**"],
