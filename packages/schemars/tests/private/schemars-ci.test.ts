@@ -31,6 +31,7 @@ test.each([
 		"scripts/check-schemars.ts",
 		"scripts/schemars-contract.ts",
 		"packages/schemars/src/eras.ts",
+		"packages/schemars/src/select-era.ts",
 	]) {
 		await put(file, "")
 		await copyFile(
@@ -47,7 +48,10 @@ test.each([
 			.join("\n")
 	const catalog = { eras: [{ since: "0.8.21", versions: ["0.8.21"] }] }
 	await put("package.json", '{"type":"module"}')
-	await put(CATALOG, JSON.stringify(catalog))
+	await put(
+		CATALOG,
+		`export const schemarsEras = ${JSON.stringify(catalog.eras)} as const`,
+	)
 	await put(`${FIXTURES}/eras/0.8.21.json`, JSON.stringify(corpus))
 	await put(`${FIXTURES}/eras/0.8.21.rs`, "// frozen generator")
 	await put(`${FIXTURES}/versions/0.8.21/Cargo.toml`, manifest("0.8.21"))
@@ -72,7 +76,10 @@ test.each([
 	await put(path.join(path.dirname(PROBE), "Cargo.lock"), lock("0.8.22"))
 	if (extended) {
 		catalog.eras[0]!.versions.push("0.8.22")
-		await put(CATALOG, JSON.stringify(catalog))
+		await put(
+			CATALOG,
+			`export const schemarsEras = ${JSON.stringify(catalog.eras)} as const`,
+		)
 	}
 	await put(
 		"actual.json",

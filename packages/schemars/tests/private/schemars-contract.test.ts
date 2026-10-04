@@ -12,7 +12,9 @@ import {
 	type Corpus,
 } from "../../../../scripts/schemars-contract.ts"
 import fixture from "../public/fixtures/eras/0.8.15.json" with { type: "json" }
-import catalog from "../../src/eras.json" with { type: "json" }
+import { schemarsEras } from "../../src/eras.ts"
+
+const catalog = { eras: schemarsEras }
 
 const current: Contracts = { catalog, fixtures: { "0.8.15": fixture } }
 const previous: Contracts = {

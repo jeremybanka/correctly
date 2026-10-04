@@ -120,6 +120,35 @@ console.log(JSON.stringify({ root: Object.keys(catalog), ajv: Object.keys(backen
 				ajv: ["schemars"],
 			})
 			expect(exports.versions).toContain("0.8.22")
+			await put(root, "package.json", { type: "module" })
+			await cp(
+				new URL("../public/config-types.ts", import.meta.url),
+				path.join(root, "config-types.ts"),
+			)
+			await put(root, "tsconfig.json", {
+				compilerOptions: {
+					strict: true,
+					noEmit: true,
+					skipLibCheck: true,
+					module: "NodeNext",
+					target: "ES2024",
+					types: [],
+				},
+				files: ["config-types.ts"],
+			})
+			const types = spawnSync(
+				process.execPath,
+				[
+					fileURLToPath(
+						new URL("bin/tsc", import.meta.resolve("typescript/package.json")),
+					),
+					"-p",
+					root,
+				],
+				{ cwd: root, encoding: "utf8", timeout: 10_000 },
+			)
+			expect(types.error).toBeUndefined()
+			expect(types.status, types.stdout + types.stderr).toBe(0)
 			const core = JSON.parse(
 				await readFile(path.join(coreRoot, "package.json"), "utf8"),
 			)

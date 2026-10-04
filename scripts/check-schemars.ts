@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process"
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { stripTypeScriptTypes } from "node:module"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
 import {
@@ -34,8 +35,16 @@ function git(...args: string[]): string {
 		stdio: ["ignore", "pipe", "pipe"],
 	})
 }
-function contracts(readText: (file: string) => string): Contracts {
-	const catalog = JSON.parse(readText(CATALOG)) as Catalog
+async function contracts(
+	readText: (file: string) => string,
+): Promise<Contracts> {
+	// Read each revision's self-contained catalog, without resolving its imports
+	// against the working tree or confusing the base and current module caches.
+	const source = stripTypeScriptTypes(readText(CATALOG))
+	const { schemarsEras } = (await import(
+		`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
+	)) as { schemarsEras: Catalog["eras"] }
+	const catalog: Catalog = { eras: schemarsEras }
 	return {
 		catalog,
 		fixtures: Object.fromEntries(
@@ -80,7 +89,7 @@ function generate(manifest: string, expected: string): Corpus {
 export async function checkSchemars(
 	base = process.env.SCHEMARS_BASE_REF,
 ): Promise<void> {
-	const current = contracts(read)
+	const current = await contracts(read)
 	validateCatalog(current)
 	let previous: Contracts | undefined
 	let previousVersion: string | undefined
@@ -91,7 +100,7 @@ export async function checkSchemars(
 			git("ls-tree", "-r", "--name-only", base).trim().split("\n"),
 		)
 		if (baseFiles.has(CATALOG))
-			previous = contracts((file) => git("show", `${base}:${file}`))
+			previous = await contracts((file) => git("show", `${base}:${file}`))
 		if (baseFiles.has(PROBE))
 			previousVersion = pinnedVersion(git("show", `${base}:${PROBE}`))
 	}

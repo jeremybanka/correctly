@@ -1,10 +1,14 @@
 # Schemars compatibility guide
 
-Import the `schemars` factory from `@correctlyjs/schemars/ajv`. It implements `AjvExtension` from `correctly/validators/ajv`. The package root exports the `schemarsEras` catalog and `SchemarsEra` type.
+Import the `schemars` factory from `@correctlyjs/schemars/ajv`. It implements `AjvExtension` from `correctly/validators/ajv`. The package root exports the `schemarsEras` catalog and the `SchemarsEra`, `SchemarsVersion`, and `SchemarsVersionSelection` types.
 
 `schemars({ version: "0.8.22" })` selects an exact reviewed upstream Schemars release. `schemars({ version: ">=0.8.15 <=0.8.22" })` selects a closed range within one compatibility era. The first era contains **0.8.15, 0.8.16, 0.8.17, 0.8.18, 0.8.19, 0.8.20, 0.8.21, and 0.8.22**: all eight independently pinned generators and matching derive crates produce the same 74 schemas. The exported, immutable `schemarsEras` catalog lists every reviewed release and its era's starting version.
 
 The required `version` argument accepts exactly `major.minor.patch` or `>=major.minor.patch <=major.minor.patch` (one space, inclusive bounds). Both endpoints must be reviewed releases in the same era. Reversed bounds, prereleases, caret/tilde ranges, wildcards, open ranges, unreviewed endpoints, and ranges crossing eras are rejected. Future releases never become supported implicitly. Diagnostic IDs preserve the selection, for example `schemars@>=0.8.15 <=0.8.22`. The selection is an explicit compatibility assertion by the configuration author; Correctly cannot infer which Schemars release generated a schema.
+
+The catalog lives in TypeScript as a deeply frozen literal tuple. `SchemarsEra` is the union of its actual entries, `SchemarsVersion` is the union of exact reviewed releases, and `SchemarsVersionSelection` also includes ordered, inclusive ranges within each era. `schemars({ version })` uses that selection type, so editors suggest supported selections and TypeScript rejects unreviewed versions, reversed bounds, and ranges crossing eras. Adding a reviewed release updates the types from the same data; adding an era also requires its Ajv implementation at compile time. Runtime checks remain in place for JavaScript callers and values that bypass static typing.
+
+When storing a selection in a separate options object, use `satisfies { version: SchemarsVersionSelection }` or a const assertion to preserve its literal type. An arbitrary `string` is deliberately not accepted as a reviewed selection.
 
 An era is a frozen generated-schema contract with its own validation semantics. Extending an era adds a tested release without changing those semantics; changed generated schemas require a new era beginning at that release. Each newly reviewed stable Schemars release requires a new @correctlyjs/schemars release, even when schemas are identical. This policy concerns upstream emitted formats, not Rust execution or identical Serde deserialization. Releases outside the catalog and forks, including `oxc-schemars`, are not covered by the upstream pins; schemas using the same vocabulary can explicitly opt into the documented contract.
 

@@ -1,49 +1,49 @@
-/** Reviewed releases, grouped by identical generated schema contracts. */
-import catalog from "./eras.json" with { type: "json" }
-export const schemarsEras: readonly SchemarsEra[] = Object.freeze(
-	catalog.eras.map((era) =>
-		Object.freeze({ ...era, versions: Object.freeze(era.versions) }),
-	),
-)
-
-export type SchemarsEra = {
+/** Structural shape used when checking historical or candidate catalogs. */
+export type EraDefinition = {
 	readonly since: string
 	readonly versions: readonly string[]
 }
-export function compareVersions(left: string, right: string): number {
-	const a = left.split(".").map(Number),
-		b = right.split(".").map(Number)
-	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i]! - b[i]!
-	return 0
-}
-const VERSION = "(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)"
-const EXACT = new RegExp(`^${VERSION}$`)
-const RANGE = new RegExp(`^>=(${VERSION}) <=(${VERSION})$`)
-export function selectSchemarsEra(
-	selection: string,
-	eras: readonly SchemarsEra[] = schemarsEras,
-): SchemarsEra {
-	const range = typeof selection === "string" ? RANGE.exec(selection) : null
-	const from = range?.[1] ?? selection,
-		through = range?.[2] ?? selection
-	if (
-		typeof from !== "string" ||
-		!EXACT.test(from) ||
-		!EXACT.test(through) ||
-		compareVersions(from, through) > 0
-	)
-		throw new Error(
-			`Unsupported Schemars version selection: ${JSON.stringify(selection)}. Use an exact reviewed release or a closed range such as ">=0.8.15 <=0.8.22".`,
-		)
-	const first = eras.find((era) => era.versions.includes(from)),
-		last = eras.find((era) => era.versions.includes(through))
-	if (!first || !last)
-		throw new Error(
-			`Unsupported Schemars version selection: ${JSON.stringify(selection)}. Reviewed eras: ${eras.map((era) => `${era.since}–${era.versions.at(-1)}`).join(", ")}. Unreviewed releases are not enabled implicitly.`,
-		)
-	if (first !== last)
-		throw new Error(
-			`Schemars range ${JSON.stringify(selection)} crosses compatibility eras. Select releases from one era to avoid combining different validation semantics.`,
-		)
-	return first
-}
+
+/** Reviewed releases, grouped by identical generated schema contracts.
+ * Keep this module self-contained: CI loads it from both Git revisions.
+ */
+export const schemarsEras = Object.freeze([
+	Object.freeze({
+		since: "0.8.15",
+		versions: Object.freeze([
+			"0.8.15",
+			"0.8.16",
+			"0.8.17",
+			"0.8.18",
+			"0.8.19",
+			"0.8.20",
+			"0.8.21",
+			"0.8.22",
+		] as const),
+	}),
+] as const satisfies readonly EraDefinition[])
+
+/** One of the compatibility eras reviewed by this package. */
+export type SchemarsEra = (typeof schemarsEras)[number]
+/** An exact reviewed upstream release. */
+export type SchemarsVersion = SchemarsEra["versions"][number]
+
+// The ordered tuple supplies each lower bound and only upper bounds at or after it.
+type ClosedRanges<
+	Versions extends readonly string[],
+	Ranges extends string = never,
+> = Versions extends readonly [
+	infer First extends string,
+	...infer Rest extends readonly string[],
+]
+	? ClosedRanges<Rest, Ranges | `>=${First} <=${Versions[number]}`>
+	: Ranges
+
+// Distribute over eras before constructing ranges so they cannot cross eras.
+export type VersionSelection<Era extends EraDefinition> =
+	Era extends EraDefinition
+		? Era["versions"][number] | ClosedRanges<Era["versions"]>
+		: never
+
+/** An exact reviewed release or an ordered, inclusive range within one era. */
+export type SchemarsVersionSelection = VersionSelection<SchemarsEra>

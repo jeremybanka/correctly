@@ -1,13 +1,11 @@
 import { isDeepStrictEqual } from "node:util"
-import {
-	compareVersions,
-	type SchemarsEra,
-} from "../packages/schemars/src/eras.ts"
+import type { EraDefinition } from "../packages/schemars/src/eras.ts"
+import { compareVersions } from "../packages/schemars/src/select-era.ts"
 
 export type Corpus = { schemas: Record<string, unknown> }
-export type Catalog = { eras: readonly SchemarsEra[] }
+export type Catalog = { eras: readonly EraDefinition[] }
 export type Contracts = { catalog: Catalog; fixtures: Record<string, Corpus> }
-export const CATALOG = "packages/schemars/src/eras.json"
+export const CATALOG = "packages/schemars/src/eras.ts"
 export const FIXTURES = "packages/schemars/tests/public/fixtures"
 export const PACKAGE_NAME = "@correctlyjs/schemars"
 export const PACKAGE_MANIFEST = "packages/schemars/package.json"

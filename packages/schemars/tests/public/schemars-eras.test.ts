@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test"
 import { schemarsEras } from "../../src/index.ts"
 import { schemars } from "../../src/ajv.ts"
-import { selectSchemarsEra } from "../../src/eras.ts"
+import { selectSchemarsEra } from "../../src/select-era.ts"
 import { setup } from "../../../correctly/tests/public/helpers.ts"
 
 const versions = schemarsEras.flatMap((era) => [...era.versions])
@@ -49,6 +49,7 @@ test.each([
 	"0.8.22-alpha.1",
 	"00.8.22",
 ])("%s cannot silently enable unreviewed support", (version) => {
+	// @ts-expect-error Exercise JavaScript callers that bypass static validation.
 	expect(() => schemars({ version })).toThrow(
 		"Unsupported Schemars version selection",
 	)
@@ -62,5 +63,7 @@ test("ranges crossing compatibility eras fail instead of unioning incompatible a
 	).toThrow("crosses compatibility eras")
 })
 test("the public era catalog cannot be mutated by configuration code", () => {
-	expect(() => (schemarsEras[0]!.versions as string[]).push("0.8.23")).toThrow()
+	expect(Reflect.set(schemarsEras[0].versions, 8, "0.8.23")).toBe(false)
+	expect(Reflect.set(schemarsEras[0], "since", "0.8.23")).toBe(false)
+	expect(Reflect.set(schemarsEras, 1, {})).toBe(false)
 })

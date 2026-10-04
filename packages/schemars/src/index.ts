@@ -1,1 +1,6 @@
-export { schemarsEras, type SchemarsEra } from "./eras.ts"
+export {
+	schemarsEras,
+	type SchemarsEra,
+	type SchemarsVersion,
+	type SchemarsVersionSelection,
+} from "./eras.ts"

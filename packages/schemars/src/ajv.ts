@@ -1,5 +1,6 @@
 import { isIP } from "node:net"
-import { selectSchemarsEra } from "./eras.ts"
+import { selectSchemarsEra } from "./select-era.ts"
+import type { SchemarsEra, SchemarsVersionSelection } from "./eras.ts"
 import type { AjvExtension } from "correctly/validators/ajv"
 
 const formats: Record<string, NonNullable<AjvExtension["formats"]>[string]> = {}
@@ -55,12 +56,14 @@ function partialDateTime(value: string): boolean {
 }
 formats["partial-date-time"] = { type: "string", validate: partialDateTime }
 
-const implementations: Record<string, typeof formats> = {
+const implementations = {
 	"0.8.15": formats,
-}
+} satisfies Record<SchemarsEra["since"], typeof formats>
 
 /** Select one reviewed schema contract, using an exact release or closed range. */
-export function schemars(options: { version: string }): AjvExtension {
+export function schemars(options: {
+	version: SchemarsVersionSelection
+}): AjvExtension {
 	const era = selectSchemarsEra(options.version)
 	const implementation = implementations[era.since]
 	if (!implementation)
