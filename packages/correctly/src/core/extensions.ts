@@ -1,7 +1,6 @@
 import type { Ajv, FormatDefinition } from "ajv"
 import { CorrectlyError } from "./types.ts"
 import { schemaChildren } from "./schema-walk.ts"
-import { schemars } from "./extensions/schemars.ts"
 
 /** Synchronous assertions and annotation-only keywords. Registration is explicit. */
 export type SchemaExtension = {
@@ -12,8 +11,36 @@ export type SchemaExtension = {
 	annotations?: readonly string[]
 }
 
-export const knownExtensions: readonly SchemaExtension[] = [
-	schemars({ version: "0.8.22" }),
+type ExtensionSuggestion = {
+	id: string
+	formats: readonly string[]
+	guidance: string
+}
+// Discovery metadata only: implementations are installed by the consuming project.
+export const knownExtensions: readonly ExtensionSuggestion[] = [
+	{
+		id: "@correctlyjs/schemars",
+		formats: [
+			"int",
+			"uint",
+			"int8",
+			"uint8",
+			"int16",
+			"uint16",
+			"int32",
+			"uint32",
+			"int64",
+			"uint64",
+			"int128",
+			"uint128",
+			"float",
+			"double",
+			"ip",
+			"phone",
+			"partial-date-time",
+		],
+		guidance: `For a Schemars-generated schema, install @correctlyjs/schemars and import { schemars } from "@correctlyjs/schemars". Select the schema's reviewed Schemars version with schemars({ version: "..." }) in this Ajv validator's extensions in correctly.config.ts.`,
+	},
 ]
 
 export function installExtensions(
@@ -85,7 +112,7 @@ export function assertFormats(
 	ajv: Ajv,
 	schema: unknown,
 	uri: string,
-	registry: readonly SchemaExtension[],
+	registry: readonly ExtensionSuggestion[],
 	location = "",
 ): void {
 	if (typeof schema !== "object" || schema === null || Array.isArray(schema))
@@ -97,12 +124,10 @@ export function assertFormats(
 			ajv.formats[object.format] === true)
 	) {
 		const format = object.format
-		const extension = registry.find((entry) =>
-			Object.hasOwn(entry.formats ?? {}, format),
-		)?.id
-		const hint = extension
-			? `Import schemars from "correctly/extensions/schemars" and add schemars({ version: "0.8.22" }) to this Ajv validator's extensions in correctly.config.ts.`
-			: `Pass an extension implementing ${JSON.stringify(format)} to this Ajv validator's extensions in correctly.config.ts.`
+		const extension = registry.find((entry) => entry.formats.includes(format))
+		const hint =
+			extension?.guidance ??
+			`Pass an extension implementing ${JSON.stringify(format)} to this Ajv validator's extensions in correctly.config.ts.`
 		throw new CorrectlyError(
 			"extension-required",
 			`This schema needs an extension.\nFormat ${JSON.stringify(format)} has no enabled validator; validation cannot proceed.\nSchema: ${uri}#${location}/format\n${hint}`,
@@ -110,7 +135,7 @@ export function assertFormats(
 				schemaUri: uri,
 				schemaPointer: `${location}/format`,
 				format,
-				...(extension ? { suggestedExtension: extension } : {}),
+				...(extension ? { suggestedExtension: extension.id } : {}),
 			},
 		)
 	}

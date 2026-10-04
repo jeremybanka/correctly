@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process"
 import { chmod, copyFile, mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { expect, test } from "vite-plus/test"
-import { temp } from "../public/helpers.ts"
+import { temp } from "../../../correctly/tests/public/helpers.ts"
 import {
 	CATALOG,
 	FIXTURES,
@@ -30,7 +30,7 @@ test.each([
 	for (const file of [
 		"scripts/check-schemars.ts",
 		"scripts/schemars-contract.ts",
-		"packages/correctly/src/core/extensions/schemars-eras.ts",
+		"packages/schemars/src/eras.ts",
 	]) {
 		await put(file, "")
 		await copyFile(

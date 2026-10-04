@@ -9,7 +9,6 @@ export default defineConfig({
 				core: "src/core/index.ts",
 				worker: "src/runtime/worker.ts",
 				ajv: "src/validators/ajv.ts",
-				schemars: "src/extensions/schemars.ts",
 				renovate: "src/extensions/renovate.ts",
 			},
 			format: "esm",
@@ -20,7 +19,6 @@ export default defineConfig({
 				entry: [
 					"src/core/index.ts",
 					"src/validators/ajv.ts",
-					"src/extensions/schemars.ts",
 					"src/extensions/renovate.ts",
 				],
 				sourcemap: true,

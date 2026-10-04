@@ -1,5 +1,5 @@
 /** Reviewed releases, grouped by identical generated schema contracts. */
-import catalog from "./schemars-eras.json" with { type: "json" }
+import catalog from "./eras.json" with { type: "json" }
 export const schemarsEras: readonly SchemarsEra[] = Object.freeze(
 	catalog.eras.map((era) =>
 		Object.freeze({ ...era, versions: Object.freeze(era.versions) }),

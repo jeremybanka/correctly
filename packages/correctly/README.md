@@ -5,7 +5,7 @@ Compose parsers and validators in one TypeScript configuration for CI and editor
 ```ts
 import { defineConfig, json } from "correctly"
 import { ajv } from "correctly/validators/ajv"
-import { schemars } from "correctly/extensions/schemars"
+import { schemars } from "@correctlyjs/schemars"
 
 export default defineConfig({
 	associations: [
@@ -21,7 +21,7 @@ export default defineConfig({
 })
 ```
 
-Install Correctly in your project and save this as `correctly.config.ts`, then run `correctly check`. Comline loads the configuration and its imported implementations. Exit codes are 0 for success, 1 for document errors, and 2 for configuration/schema/execution failures. Use `correctly check --format json` for a versioned report or `correctly check --offline` for cached remote schemas.
+Install `correctly` and `@correctlyjs/schemars` in your project and save this as `correctly.config.ts`, then run `correctly check`. Comline loads the configuration and its imported implementations. Exit codes are 0 for success, 1 for document errors, and 2 for configuration/schema/execution failures. Use `correctly check --format json` for a versioned report or `correctly check --offline` for cached remote schemas.
 
 The VS Code extension and `correctly-lsp --stdio` use the same runtime for diagnostics, completion and hover. Executable configuration runs only in trusted workspaces and reloads after saving; data and schema buffers validate as you type.
 

@@ -7,6 +7,8 @@ import {
 	CATALOG,
 	FIXTURES,
 	PROBE,
+	PACKAGE_NAME,
+	PACKAGE_MANIFEST,
 	ContractFailure,
 	pinnedVersion,
 	verifyLock,
@@ -133,17 +135,17 @@ export async function checkSchemars(
 					.filter((file) => /^\.changeset\/[^/]+\.md$/.test(file))
 					.map((file) => git("show", `${base}:${file}`)),
 			)
-			const pkg = JSON.parse(
-				git("show", `${base}:packages/correctly/package.json`),
-			) as { version: string }
+			const pkg = JSON.parse(git("show", `${base}:${PACKAGE_MANIFEST}`)) as {
+				version: string
+			}
 			const published = await fetch(
-				`https://registry.npmjs.org/correctly/${pkg.version}`,
+				`https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}/${pkg.version}`,
 				{ signal: AbortSignal.timeout(10000) },
 			)
 			if (!published.ok)
 				throw new ContractFailure(
 					"SCHEMARS_PREVIOUS_RELEASE_PENDING",
-					`Publish Correctly ${pkg.version} before accepting another Schemars release (npm returned HTTP ${published.status}).`,
+					`Publish ${PACKAGE_NAME} ${pkg.version} before accepting another Schemars release (npm returned HTTP ${published.status}).`,
 				)
 
 			const response = await fetch("https://index.crates.io/sc/he/schemars", {

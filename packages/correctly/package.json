@@ -18,10 +18,6 @@
 			"types": "./dist/ajv.d.mts",
 			"import": "./dist/ajv.mjs"
 		},
-		"./extensions/schemars": {
-			"types": "./dist/schemars.d.mts",
-			"import": "./dist/schemars.mjs"
-		},
 		"./extensions/renovate": {
 			"types": "./dist/renovate.d.mts",
 			"import": "./dist/renovate.mjs"
@@ -46,7 +42,8 @@
 		"test": "vp test",
 		"test:public": "vp test tests/public",
 		"test:private": "vp test tests/private",
-		"test:watch": "vp test watch"
+		"test:watch": "vp test watch",
+		"test:distribution": "vp test tests/private/distribution.test.ts"
 	},
 	"dependencies": {
 		"ajv": "8.20.0",

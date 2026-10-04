@@ -18,4 +18,4 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `change`            | Author release notes; bodies stay on one line.                                                                                                 |
 | `release:version`   | Prepare versions and release metadata without publishing.                                                                                      |
 
-CI runs `check`, `test:schemars`, `test`, `build`, `build:vsix`, and `test:distribution`. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own Correctly changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.
+CI runs `check`, `test:schemars`, `test`, `build`, `build:vsix`, and `test:distribution`. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own `@correctlyjs/schemars` changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.

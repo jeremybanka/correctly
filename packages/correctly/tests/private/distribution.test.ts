@@ -220,7 +220,7 @@ describe.runIf(
 		expect(JSON.parse(missing.stdout).failures).toMatchObject([
 			{
 				code: "extension-required",
-				details: { suggestedExtension: "schemars@0.8.22" },
+				details: { suggestedExtension: "@correctlyjs/schemars" },
 			},
 		])
 		const isolated = await temp()

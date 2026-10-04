@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test"
-import type { TestConfig } from "./helpers.ts"
-import { setup } from "./helpers.ts"
-import fixture from "./fixtures/schemars/eras/0.8.15.json" with { type: "json" }
+import type { TestConfig } from "../../../correctly/tests/public/helpers.ts"
+import { setup } from "../../../correctly/tests/public/helpers.ts"
+import fixture from "./fixtures/eras/0.8.15.json" with { type: "json" }
 
 const config: TestConfig = {
 	associations: [

@@ -6,4 +6,4 @@
 
 The test suite starts local HTTP servers to exercise real remote-loading behavior. It needs loopback network access; it does not fetch external schemas or depend on sibling repositories at test time. Fixture origins are recorded in `public/fixtures/repositories/README.md`.
 
-Schemars eras use real output from an exactly pinned Rust generator and derive crate for every reviewed release; see `public/fixtures/schemars/README.md`. CI additionally runs `pnpm test:schemars` to install and regenerate every historical contract using its locked Cargo graph and review the separate Renovate probe against the PR base. Private tests exercise the actual CI entry point and both era-review failures.
+Schemars format behavior, pinned Rust fixtures, and the compatibility release gate live in `packages/schemars/tests`. Core retains cross-extension, CLI, and editor integration coverage. Run `pnpm test:schemars` to reproduce every historical contract and review the Renovate probe.

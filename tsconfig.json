@@ -5,7 +5,9 @@
 		"declaration": true,
 		"erasableSyntaxOnly": true,
 		"exactOptionalPropertyTypes": true,
-		"lib": ["ES2024"],
+		"lib": [
+			"ES2024"
+		],
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
 		"noEmit": true,
@@ -22,13 +24,16 @@
 			"correctly/validators/ajv": [
 				"./packages/correctly/src/validators/ajv.ts"
 			],
-			"correctly/extensions/schemars": [
-				"./packages/correctly/src/extensions/schemars.ts"
+			"@correctlyjs/schemars": [
+				"./packages/schemars/src/index.ts"
 			],
 			"correctly/extensions/renovate": [
 				"./packages/correctly/src/extensions/renovate.ts"
 			]
 		}
 	},
-	"include": ["**/*.ts", "*.d.ts"]
+	"include": [
+		"**/*.ts",
+		"*.d.ts"
+	]
 }

@@ -11,8 +11,8 @@ import {
 	type Contracts,
 	type Corpus,
 } from "../../../../scripts/schemars-contract.ts"
-import fixture from "../public/fixtures/schemars/eras/0.8.15.json" with { type: "json" }
-import catalog from "../../src/core/extensions/schemars-eras.json" with { type: "json" }
+import fixture from "../public/fixtures/eras/0.8.15.json" with { type: "json" }
+import catalog from "../../src/eras.json" with { type: "json" }
 
 const current: Contracts = { catalog, fixtures: { "0.8.15": fixture } }
 const previous: Contracts = {
@@ -30,7 +30,7 @@ const different: Corpus = {
 	},
 }
 const patch =
-	'---\n"correctly": patch\n---\n\nExtend Schemars support through 0.8.22.\n'
+	'---\n"@correctlyjs/schemars": patch\n---\n\nExtend Schemars support through 0.8.22.\n'
 
 test("an initial Renovate pin bump with identical schemas is red until its era is extended", () => {
 	expect(() => reviewCandidate("0.8.22", fixture, previous, previous)).toThrow(
@@ -119,7 +119,7 @@ test("the first catalog may adopt historical releases together", () => {
 test.each(
 	[
 		[],
-		[patch.replace('"correctly"', '"another-package"')],
+		[patch.replace('"@correctlyjs/schemars"', '"correctly"')],
 		[patch.replace("0.8.22", "0.8.21")],
 		[patch.replace("patch", "none")],
 		[patch.replace("0.8.22", "0.8.220")],
@@ -132,7 +132,7 @@ test.each(
 		)
 	},
 )
-test("a new correctly changeset must name the reviewed release", () => {
+test("a new extension changeset must name the reviewed release", () => {
 	expect(() => requireChangeset("0.8.22", [patch])).not.toThrow()
 })
 test("pending Schemars changesets must ship before another update", () => {
@@ -140,6 +140,11 @@ test("pending Schemars changesets must ship before another update", () => {
 		"SCHEMARS_PREVIOUS_RELEASE_PENDING",
 	)
 	expect(() => requirePreviousRelease("0.8.22", [])).not.toThrow()
+	expect(() =>
+		requirePreviousRelease("0.8.22", [
+			patch.replace('"@correctlyjs/schemars"', '"correctly"'),
+		]),
+	).not.toThrow()
 })
 test("Renovate cannot silently skip intermediate stable releases", () => {
 	expect(() =>
@@ -170,7 +175,7 @@ test("every historical crate and derive dependency is locked at its exact advert
 	for (const era of catalog.eras)
 		for (const version of era.versions) {
 			const root = new URL(
-				`../public/fixtures/schemars/versions/${version}/`,
+				`../public/fixtures/versions/${version}/`,
 				import.meta.url,
 			)
 			expect(

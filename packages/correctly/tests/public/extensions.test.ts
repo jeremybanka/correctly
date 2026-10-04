@@ -8,7 +8,7 @@ import {
 	type ProjectConfig,
 } from "../../src/core/index.ts"
 import { ajv, type SchemaExtension } from "../../src/validators/ajv.ts"
-import { schemars } from "../../src/extensions/schemars.ts"
+import { schemars } from "../../../schemars/src/index.ts"
 import { renovate } from "../../src/extensions/renovate.ts"
 import { check } from "../../src/cli/check.ts"
 import { readableReport } from "../../src/cli/readable.ts"
@@ -67,7 +67,7 @@ test.each([false, true])(
 								code: "extension-required",
 								details: {
 									format: "uint16",
-									suggestedExtension: "schemars@0.8.22",
+									suggestedExtension: "@correctlyjs/schemars",
 								},
 							},
 						],
@@ -155,7 +155,7 @@ test("missing and annotation-only formats give actionable CLI and JSON failures"
 		)
 		expect(output).toContain(
 			["uint16", "int32", "int64", "float", "double"].includes(format)
-				? 'schemars({ version: "0.8.22" })'
+				? 'import { schemars } from "@correctlyjs/schemars"'
 				: "Pass an extension implementing",
 		)
 		expect(output).toContain("correctly.config.ts")
@@ -282,7 +282,7 @@ test("LSP displays extension guidance and applies a saved config's imported impl
 	const client = await lspClient([root])
 	await client.open(uri, '{"limit":1}')
 	expect((await client.wait(uri, 1)).diagnostics[0]?.message).toContain(
-		'schemars({ version: "0.8.22" })',
+		'import { schemars } from "@correctlyjs/schemars"',
 	)
 	const source = configSource({
 		files: ["data/**"],

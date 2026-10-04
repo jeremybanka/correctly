@@ -258,6 +258,12 @@ importers:
         specifier: 10.1.2
         version: 10.1.2
 
+  packages/schemars:
+    devDependencies:
+      correctly:
+        specifier: workspace:*
+        version: link:../correctly
+
 packages:
 
   '@azure/abort-controller@2.2.0':

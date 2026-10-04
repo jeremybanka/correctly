@@ -2,14 +2,15 @@ import { isDeepStrictEqual } from "node:util"
 import {
 	compareVersions,
 	type SchemarsEra,
-} from "../packages/correctly/src/core/extensions/schemars-eras.ts"
+} from "../packages/schemars/src/eras.ts"
 
 export type Corpus = { schemas: Record<string, unknown> }
 export type Catalog = { eras: readonly SchemarsEra[] }
 export type Contracts = { catalog: Catalog; fixtures: Record<string, Corpus> }
-export const CATALOG =
-	"packages/correctly/src/core/extensions/schemars-eras.json"
-export const FIXTURES = "packages/correctly/tests/public/fixtures/schemars"
+export const CATALOG = "packages/schemars/src/eras.json"
+export const FIXTURES = "packages/schemars/tests/public/fixtures"
+export const PACKAGE_NAME = "@correctlyjs/schemars"
+export const PACKAGE_MANIFEST = "packages/schemars/package.json"
 export const PROBE = "compatibility/schemars/probe/Cargo.toml"
 export class ContractFailure extends Error {
 	readonly code: string
@@ -124,7 +125,7 @@ export function reviewCandidate(
 	if (!reference)
 		fail(
 			"SCHEMARS_NEW_ERA_REQUIRED",
-			`Schemars ${version} predates the reviewed contracts. Add an era beginning at ${version}, a pinned generator, assertions, documentation, and a Correctly changeset.`,
+			`Schemars ${version} predates the reviewed contracts. Add an era beginning at ${version}, a pinned generator, assertions, documentation, and an @correctlyjs/schemars changeset.`,
 		)
 	const before = (previous ?? current).fixtures[reference.since]!
 	const changes = changedSchemas(before, actual)
@@ -133,12 +134,12 @@ export function reviewCandidate(
 		if (changes.length && (!declared || declared.since !== version))
 			fail(
 				"SCHEMARS_NEW_ERA_REQUIRED",
-				`Schemars ${version} produces new schemas (${changes.join(", ")}). Add a compatibility era beginning at ${version}; preserve era ${reference.since}. Add the exact generator pin, behavioral tests, documentation, and a Correctly changeset.`,
+				`Schemars ${version} produces new schemas (${changes.join(", ")}). Add a compatibility era beginning at ${version}; preserve era ${reference.since}. Add the exact generator pin, behavioral tests, documentation, and an @correctlyjs/schemars changeset.`,
 			)
 		if (!changes.length && (!declared || declared.since !== reference.since))
 			fail(
 				"SCHEMARS_ERA_EXTENSION_REQUIRED",
-				`Schemars ${version} produces the same schemas as era ${reference.since}. Extend that era through ${version}, add the exact generator pin, and add a Correctly changeset. Identical schemas still require a release.`,
+				`Schemars ${version} produces the same schemas as era ${reference.since}. Extend that era through ${version}, add the exact generator pin, and add an @correctlyjs/schemars changeset. Identical schemas still require a release.`,
 			)
 	}
 	if (!declared)
@@ -179,7 +180,7 @@ export function reviewCandidate(
 		)
 			fail(
 				"SCHEMARS_ONE_RELEASE_REQUIRED",
-				"Review one new Schemars release per PR so each receives its own Correctly release.",
+				"Review one new Schemars release per PR so each receives its own @correctlyjs/schemars release.",
 			)
 	}
 }
@@ -188,7 +189,9 @@ function changesetNamesRelease(text: string, version: string): boolean {
 	if (!sections) return false
 	const [, frontmatter, body] = sections
 	return (
-		/^["']?correctly["']?:\s*(patch|minor|major)\s*\r?$/m.test(frontmatter!) &&
+		/^["']?@correctlyjs\/schemars["']?:\s*(patch|minor|major)\s*\r?$/m.test(
+			frontmatter!,
+		) &&
 		body!.match(/\b\d+\.\d+\.\d+(?:-[\w.-]+)?\b/g)?.includes(version) === true
 	)
 }
@@ -199,7 +202,7 @@ export function requireChangeset(
 	if (!changesets.some((text) => changesetNamesRelease(text, version)))
 		fail(
 			"SCHEMARS_CHANGESET_REQUIRED",
-			`Add a new Correctly changeset naming Schemars ${version}. Every newly reviewed Schemars release ships a Correctly release, including unchanged schemas.`,
+			`Add a new @correctlyjs/schemars changeset naming Schemars ${version}. Every newly reviewed Schemars release ships an @correctlyjs/schemars release, including unchanged schemas.`,
 		)
 }
 /** A newer pending bot PR must not silently skip intervening stable releases. */
@@ -219,7 +222,7 @@ export function requireNextRelease(
 	if (skipped.length)
 		fail(
 			"SCHEMARS_RELEASES_SKIPPED",
-			`Review and release Schemars ${skipped[0]} first; this update skips ${skipped.join(", ")}. Each Schemars release needs its own Correctly release.`,
+			`Review and release Schemars ${skipped[0]} first; this update skips ${skipped.join(", ")}. Each Schemars release needs its own @correctlyjs/schemars release.`,
 		)
 }
 
@@ -230,6 +233,6 @@ export function requirePreviousRelease(
 	if (pendingChangesets.some((text) => changesetNamesRelease(text, version)))
 		fail(
 			"SCHEMARS_PREVIOUS_RELEASE_PENDING",
-			`Publish the Correctly release for Schemars ${version} before accepting another Schemars release. Its changeset is still pending on the base branch.`,
+			`Publish the @correctlyjs/schemars release for Schemars ${version} before accepting another Schemars release. Its changeset is still pending on the base branch.`,
 		)
 }

@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test"
-import { schemars, schemarsEras } from "../../src/extensions/schemars.ts"
-import { selectSchemarsEra } from "../../src/core/extensions/schemars-eras.ts"
-import { setup } from "./helpers.ts"
+import { schemars, schemarsEras } from "../../src/index.ts"
+import { selectSchemarsEra } from "../../src/eras.ts"
+import { setup } from "../../../correctly/tests/public/helpers.ts"
 
 const versions = schemarsEras.flatMap((era) => [...era.versions])
 test.each([

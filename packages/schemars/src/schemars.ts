@@ -1,12 +1,9 @@
 import { isIP } from "node:net"
-import { selectSchemarsEra } from "./schemars-eras.ts"
-import type { FormatDefinition } from "ajv"
-import type { SchemaExtension } from "../extensions.ts"
+import { selectSchemarsEra } from "./eras.ts"
+import type { SchemaExtension } from "correctly/validators/ajv"
 
-const formats: Record<
-	string,
-	FormatDefinition<string> | FormatDefinition<number>
-> = {}
+const formats: Record<string, NonNullable<SchemaExtension["formats"]>[string]> =
+	{}
 for (const bits of [8, 16, 32, 64, 128]) {
 	formats[`int${bits}`] = {
 		type: "number",

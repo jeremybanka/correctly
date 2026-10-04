@@ -45,8 +45,10 @@ export function configSource(config: TestConfig, built = false): string {
 		built ? import.meta.url : source,
 	).href
 	const extension = new URL(
-		built ? "../../dist/schemars.mjs" : "extensions/schemars.ts",
-		built ? import.meta.url : source,
+		built
+			? "../../../schemars/dist/index.mjs"
+			: "../../../schemars/src/index.ts",
+		import.meta.url,
 	).href
 	const renovate = new URL(
 		built ? "../../dist/renovate.mjs" : "extensions/renovate.ts",
@@ -62,7 +64,7 @@ export function configSource(config: TestConfig, built = false): string {
 	const { associations: _rules, ...rest } = config
 	return `import { defineConfig, json, jsonc } from ${JSON.stringify(core)}
 import { ajv } from ${JSON.stringify(adapter)}
-import { schemars } from ${JSON.stringify(extension)}
+${config.associations.some((rule) => rule.extensions?.some((id) => id.startsWith("schemars@"))) ? `import { schemars } from ${JSON.stringify(extension)}` : ""}
 import { renovate } from ${JSON.stringify(renovate)}
 export default defineConfig({ ...${JSON.stringify(rest)}, associations: [${rules.join(",\n")}] })`
 }
