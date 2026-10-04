@@ -50,7 +50,7 @@
 	"devDependencies": {
 		"@types/node": "26.6.4",
 		"@types/picomatch": "4.0.3",
-		"@types/vscode": "1.138.0",
+		"@types/vscode": "1.140.0",
 		"@vscode/vsce": "4.0.0",
 		"rolldown": "1.2.12",
 		"vscode-languageclient": "10.1.2"
