@@ -56,7 +56,7 @@ export function configSource(config: TestConfig, built = false): string {
 		({ schema, mode, extensions, ...rule }) => `{
   ...${JSON.stringify(rule)},
   ${mode ? `parse: ${mode}(),` : ""}
-  validate: ${schema === null ? "null" : `ajv({ schema: ${JSON.stringify(schema)}, extensions: [${(extensions ?? []).map((id) => (id === "schemars@0.8.22" ? 'schemars({ version: "0.8.22" })' : id === "renovate" ? "renovate()" : JSON.stringify(id))).join(",")}] })`},
+  validate: ${schema === null ? "null" : `ajv({ schema: ${JSON.stringify(schema)}, extensions: [${(extensions ?? []).map((id) => (id.startsWith("schemars@") ? `schemars({ version: ${JSON.stringify(id.slice("schemars@".length))} })` : id === "renovate" ? "renovate()" : JSON.stringify(id))).join(",")}] })`},
  }`,
 	)
 	const { associations: _rules, ...rest } = config

@@ -56,7 +56,6 @@ fn main() {
         schemars::schema::RootSchema,
     );
     println!("{}", serde_json::to_string_pretty(&json!({
-        "schemars": "0.8.22",
         "schemas": schemas,
     })).unwrap());
 }

@@ -109,6 +109,45 @@
 				"treetrunks"
 			],
 			"minimumReleaseAge": null
+		},
+		{
+			"description": "Historical Schemars contracts and probe helper dependencies are immutable audit inputs",
+			"matchManagers": [
+				"cargo"
+			],
+			"matchFileNames": [
+				"packages/correctly/tests/public/fixtures/schemars/**",
+				"compatibility/schemars/**"
+			],
+			"enabled": false
+		},
+		{
+			"description": "Every Schemars release requires an explicit era review and a Correctly release",
+			"matchManagers": [
+				"cargo"
+			],
+			"matchFileNames": [
+				"compatibility/schemars/probe/Cargo.toml"
+			],
+			"matchPackageNames": [
+				"schemars"
+			],
+			"enabled": true,
+			"automerge": false,
+			"dependencyDashboardApproval": false,
+			"minimumReleaseAge": null,
+			"rangeStrategy": "pin",
+			"ignoreUnstable": true,
+			"separateMinorPatch": true,
+			"separateMultipleMinor": true,
+			"separateMultipleMajor": true,
+			"groupName": null,
+			"branchTopic": "schemars-{{{newVersion}}}",
+			"prCreation": "immediate",
+			"prBodyNotes": [
+				"The Schemars contract check must fail on this initial dependency update, even if schemas are unchanged. Identical output requires extending the current era; changed output requires a new era beginning at this release. Preserve every historical pin/fixture, add behavioral coverage and a new Correctly changeset naming this Schemars version.",
+				"CI prevents skipping stable releases. If Renovate proposes a later patch or stream, review and release the intervening versions first. Every reviewed Schemars release requires its own published Correctly version."
+			]
 		}
 	]
 }

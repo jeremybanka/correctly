@@ -54,7 +54,9 @@ describe.runIf(
 		expect(manifest.version).toBe(pkg.version)
 		expect(manifest.engines.vscode).toBe("^1.105.0")
 		expect(manifest.capabilities.untrustedWorkspaces.supported).toBe(false)
-		expect(existsSync(path.join(isolated, "extension/dist/worker.mjs"))).toBe(true)
+		expect(existsSync(path.join(isolated, "extension/dist/worker.mjs"))).toBe(
+			true,
+		)
 		expect(existsSync(path.join(isolated, "extension/node_modules"))).toBe(
 			false,
 		)

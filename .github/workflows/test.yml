@@ -23,8 +23,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Check pinned Schemars compatibility fixtures
+      - name: Review Schemars release and reproduce pinned compatibility eras
+        env:
+          SCHEMARS_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: pnpm run test:schemars
       - run: pnpm run test
       - run: pnpm run build

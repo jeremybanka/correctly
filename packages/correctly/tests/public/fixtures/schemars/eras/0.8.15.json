@@ -1,5 +1,4 @@
 {
-  "schemars": "0.8.22",
   "schemas": {
     "()": {
       "$schema": "http://json-schema.org/draft-07/schema#",

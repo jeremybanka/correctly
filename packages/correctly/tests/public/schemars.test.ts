@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test"
 import type { TestConfig } from "./helpers.ts"
 import { setup } from "./helpers.ts"
-import fixture from "./fixtures/schemars/schemas.json" with { type: "json" }
+import fixture from "./fixtures/schemars/eras/0.8.15.json" with { type: "json" }
 
 const config: TestConfig = {
 	associations: [
@@ -99,7 +99,6 @@ function formatsIn(value: unknown, result = new Set<string>()): Set<string> {
 }
 
 test("the pinned generator's complete format inventory has behavioral coverage", () => {
-	expect(fixture.schemars).toBe("0.8.22")
 	expect([...generatedFormats.keys()].sort()).toEqual(Object.keys(cases).sort())
 	expect([...formatsIn(fixture.schemas)].sort()).toEqual(
 		Object.keys(cases).sort(),

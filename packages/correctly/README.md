@@ -14,7 +14,7 @@ export default defineConfig({
 			parse: json(),
 			validate: ajv({
 				schema: "https://turbo.build/schema.json",
-				extensions: [schemars({ version: "0.8.22" })],
+				extensions: [schemars({ version: ">=0.8.15 <=0.8.22" })],
 			}),
 		},
 	],
@@ -27,4 +27,4 @@ The VS Code extension and `correctly-lsp --stdio` use the same runtime for diagn
 
 Built-in JSON/JSONC parsers and an Ajv adapter support drafts 7 and 2020-12. Schema extensions are explicit per validator. Unsupported formats produce actionable extension requirements. Documents' `$schema` properties remain ordinary data. Correctly does not coerce values, insert defaults, remove properties, format, or fix documents.
 
-See the [guide](docs/guide.md) for migration, adapter contracts, pinned Schemars coverage and precision, discovery, cache policy, diagnostics, and editor behavior.
+See the [guide](docs/guide.md) for migration, adapter contracts, reviewed Schemars eras and precision, discovery, cache policy, diagnostics, and editor behavior.
