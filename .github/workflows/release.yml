@@ -21,7 +21,7 @@ jobs:
         id: app-token
         with:
           client-id: ${{ vars.CHANGESETS_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CHANGESETS_APP_PK_2FMSQW3UH }}
+          private-key: ${{ secrets.CHANGESETS_APP_PK_H0FPSDLQ }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
