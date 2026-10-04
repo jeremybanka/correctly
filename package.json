@@ -23,7 +23,7 @@
 		"@changesets/config": "4.0.1",
 		"@dprint/json": "0.25.1",
 		"@dprint/markdown": "0.26.0",
-		"@dprint/oxc": "0.42.0",
+		"@dprint/oxc": "0.43.0",
 		"@dprint/toml": "0.8.0",
 		"correctly": "workspace:*",
 		"dprint": "0.59.0",
