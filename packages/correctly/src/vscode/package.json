@@ -33,6 +33,8 @@
 	"activationEvents": [
 		"onLanguage:json",
 		"onLanguage:jsonc",
+		"onLanguage:yaml",
+		"onLanguage:toml",
 		"workspaceContains:**/correctly.config.ts"
 	],
 	"engines": {

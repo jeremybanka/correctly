@@ -1,7 +1,12 @@
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { TextDocument } from "vscode-languageserver-textdocument"
-import { contains, discoverConfig, CONFIG_NAME } from "../core/config.ts"
+import {
+	contains,
+	discoverConfig,
+	CONFIG_NAME,
+	modeFor,
+} from "../core/config.ts"
 import { ProjectSession } from "../runtime/session.ts"
 import { CorrectlyError, failure, type FileResult } from "../core/types.ts"
 import { diagnostic } from "../core/parse.ts"
@@ -95,7 +100,7 @@ export class Workspace {
 			if (
 				problem.code === "config" &&
 				problem.message.startsWith(`No ${CONFIG_NAME} found`) &&
-				!["json", "jsonc"].includes(document.languageId)
+				!["json", "jsonc", "yaml", "toml"].includes(document.languageId)
 			)
 				return {
 					file: fileURLToPath(document.uri),
@@ -108,7 +113,7 @@ export class Workspace {
 
 			return {
 				file: fileURLToPath(document.uri),
-				mode: document.languageId === "jsonc" ? "jsonc" : "json",
+				mode: modeFor(fileURLToPath(document.uri)),
 				association: null,
 				coverage: "syntax-only",
 				diagnostics: [
