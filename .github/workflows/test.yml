@@ -18,20 +18,88 @@ defaults:
     shell: bash
 
 jobs:
-  Test:
+  Core:
+    name: Core tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: mkdir -p artifacts/test-results
+      - run: pnpm --filter correctly run test --reporter=default --reporter=json --outputFile=../../artifacts/test-results/core.json
+      - name: Upload test timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: core-test-results
+          path: artifacts/test-results/core.json
+          retention-days: 7
+
+  Schemars:
+    name: Schemars compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Restore compiled Schemars generators
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: artifacts/schemars/target
+          key: schemars-compact-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml') }}-${{ hashFiles('compatibility/schemars/probe/**', 'packages/schemars/tests/public/fixtures/versions/**/Cargo.toml', 'packages/schemars/tests/public/fixtures/versions/**/Cargo.lock', 'packages/schemars/tests/public/fixtures/eras/*.rs') }}
+          restore-keys: |
+            schemars-compact-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml') }}-
       - name: Review Schemars release and reproduce pinned compatibility eras
         env:
           SCHEMARS_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: pnpm run test:schemars
-      - run: pnpm run test
+      - run: mkdir -p artifacts/test-results
+      - run: pnpm --filter @correctlyjs/schemars run test --reporter=default --reporter=json --outputFile=../../artifacts/test-results/schemars.json
+      - name: Upload test and generator timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: schemars-test-results
+          path: |
+            artifacts/test-results/schemars.json
+            artifacts/schemars/generation-timings.json
+          retention-days: 7
+
+  Distribution:
+    name: Build and distribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
       - run: pnpm run build
       - run: pnpm run build:vsix
-      - name: Check bundled distribution
-        run: pnpm run test:distribution
+      - run: mkdir -p artifacts/test-results
+      - run: pnpm --filter correctly run test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/core-distribution.json
+      - run: pnpm --filter @correctlyjs/schemars run test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/schemars-distribution.json
+      - name: Upload distribution timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: distribution-test-results
+          path: artifacts/test-results/*.json
+          retention-days: 7
+
+  Test:
+    if: ${{ always() }}
+    needs: [Core, Schemars, Distribution]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require every workload to pass
+        env:
+          CORE_RESULT: ${{ needs.Core.result }}
+          SCHEMARS_RESULT: ${{ needs.Schemars.result }}
+          DISTRIBUTION_RESULT: ${{ needs.Distribution.result }}
+        run: |
+          [[ "$CORE_RESULT" == "success" && "$SCHEMARS_RESULT" == "success" && "$DISTRIBUTION_RESULT" == "success" ]]

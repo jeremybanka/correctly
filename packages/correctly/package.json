@@ -43,7 +43,7 @@
 		"test:public": "vp test tests/public",
 		"test:private": "vp test tests/private",
 		"test:watch": "vp test watch",
-		"test:distribution": "vp test tests/private/distribution.test.ts"
+		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},
 	"dependencies": {
 		"ajv": "8.20.0",

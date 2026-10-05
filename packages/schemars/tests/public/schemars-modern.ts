@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { expect, test } from "vite-plus/test"
-import { schemarsEras } from "../../src/eras.ts"
+import { schemarsEras, type SchemarsEra } from "../../src/eras.ts"
 import {
 	setup,
 	type TestConfig,
@@ -62,7 +62,8 @@ modernCases["zoned-date-time"] = {
 	],
 }
 
-for (const era of schemarsEras.slice(1)) {
+export function modernEraTests(since: Exclude<SchemarsEra["since"], "0.8.15">) {
+	const era = schemarsEras.find((entry) => entry.since === since)!
 	const corpus = JSON.parse(
 		readFileSync(
 			new URL(`./fixtures/eras/${era.since}.json`, import.meta.url),
@@ -209,26 +210,3 @@ for (const era of schemarsEras.slice(1)) {
 		).toBe(fixed)
 	})
 }
-
-test("1.2 enum maps permit empty maps while rejecting unknown keys", async () => {
-	for (const version of ["1.1.0", "1.2.0"] as const) {
-		const corpus = JSON.parse(
-			readFileSync(
-				new URL(`./fixtures/eras/${version}.json`, import.meta.url),
-				"utf8",
-			),
-		) as Corpus
-		const { engine, file } = await setup(corpus.schemas.EnumMap, {
-			associations: [
-				{
-					files: ["data/**"],
-					schema: "schema.json",
-					extensions: [`schemars@${version}`],
-				},
-			],
-		})
-		expect((await engine.validate(file, '{"values":{}}')).diagnostics).toEqual(
-			[],
-		)
-	}
-})

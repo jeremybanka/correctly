@@ -15,6 +15,7 @@
 		"change": "changeset",
 		"release:publish": "pnpm build && changeset publish",
 		"release:version": "changeset version",
+		"check:tests": "node scripts/check-test-workloads.ts",
 		"check:correctly": "node packages/correctly/src/cli/main.ts check",
 		"test:distribution": "vp run -r test:distribution",
 		"test:schemars": "node scripts/check-schemars.ts"
