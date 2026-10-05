@@ -1,6 +1,6 @@
 {
 	"name": "@correctlyjs/schemars",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Reviewed Schemars compatibility eras for Correctly",
 	"repository": {
 		"type": "git",
