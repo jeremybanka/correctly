@@ -26,7 +26,7 @@
 		"@dprint/oxc": "0.43.0",
 		"@dprint/toml": "0.8.0",
 		"correctly": "workspace:*",
-		"dprint": "0.60.0",
+		"dprint": "0.60.1",
 		"dprint-plugin-yaml": "0.6.0",
 		"typescript": "7.0.2",
 		"vite-plus": "catalog:"
