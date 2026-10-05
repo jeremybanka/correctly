@@ -1,6 +1,6 @@
 # Correctly
 
-Compose JSON, JSONC, YAML, and TOML parsers with validators in one TypeScript configuration for CI and editors.
+Compose JSON, JSONC, YAML, TOML, and PKL parsers with validators in one TypeScript configuration for CI and editors.
 
 ```ts
 import { defineConfig, json } from "correctly"
@@ -28,3 +28,5 @@ The VS Code extension and `correctly-lsp --stdio` use the same runtime for diagn
 Built-in `json()`, `jsonc()`, `yaml()`, and `toml()` parsers compose with the Ajv adapter for drafts 7 and 2020-12 or with custom validators accepting JSON values. File extensions select the default parser; explicit `parse` overrides it. Schema extensions are explicit per validator. Unsupported schema formats produce actionable extension requirements. Documents' `$schema` properties remain ordinary data. Correctly does not coerce values, insert defaults, remove properties, format, or fix documents.
 
 See the [guide](docs/guide.md) for migration, adapter contracts, reviewed Schemars eras and precision, discovery, cache policy, diagnostics, and editor behavior.
+
+For PKL, import `pkl` from `correctly` as the parser and `pkl` from `correctly/validators/pkl` as the validator. The bundled pklr WASM evaluator checks Pkl types and constraints without installing Rust or the Pkl CLI. It supports imports, amendments, resource reads, remote packages, and optional validation of evaluated JSON. See the [PKL guide](docs/guide.md#pkl) for configuration and compatibility limits.

@@ -2,6 +2,7 @@ import type { Parser } from "./adapters.ts"
 import { parseDocument } from "./parse.ts"
 import { parseYaml } from "./yaml.ts"
 import { parseToml } from "./toml.ts"
+import { parsePkl } from "./pkl.ts"
 
 export function json(): Parser {
 	return {
@@ -28,6 +29,8 @@ export function defaultParser(file: string): Parser {
 			return yaml()
 		case ".toml":
 			return toml()
+		case ".pkl":
+			return pkl()
 		default:
 			return json()
 	}
@@ -39,4 +42,9 @@ export function yaml(): Parser {
 
 export function toml(): Parser {
 	return { id: "toml", valueModel: "json", parse: parseToml }
+}
+
+/** Parse Pkl syntax; use the pkl validator to evaluate types and constraints. */
+export function pkl(): Parser {
+	return { id: "pkl", valueModel: "pkl", parse: parsePkl }
 }

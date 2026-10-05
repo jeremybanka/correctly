@@ -12,6 +12,14 @@ export async function buildVsix(
 	const buildRoot = path.join(outdir, ".correctly-vsix")
 	await rm(buildRoot, { force: true, recursive: true })
 	await mkdir(path.join(buildRoot, "dist"), { recursive: true })
+	await cp(
+		path.join(packageRoot, "src/core/pklr.wasm"),
+		path.join(buildRoot, "dist/pklr.wasm"),
+	)
+	await cp(
+		path.join(packageRoot, "src/core/pklr.LICENSE"),
+		path.join(buildRoot, "dist/pklr.LICENSE"),
+	)
 	for (const [entry, outfile] of [
 		["vscode/extension", "extension"],
 		["lsp/server", "server"],

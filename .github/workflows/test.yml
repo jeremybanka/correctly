@@ -73,10 +73,12 @@ jobs:
   Distribution:
     name: Build and distribution
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+      - run: rustup target add wasm32-unknown-unknown --toolchain 1.99.0
+      - run: pnpm run build:pkl --check
       - run: pnpm run build
       - run: pnpm run build:vsix
       - run: mkdir -p artifacts/test-results
