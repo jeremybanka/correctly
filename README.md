@@ -1,6 +1,6 @@
 # Correctly
 
-JSON Schema validation for JSON, JSONC, YAML, and TOML in CI and editors, using one external TypeScript configuration. Correctly composes parser and validator adapters in a CLI, a stdio language server, and a bundled VS Code extension.
+JSON Schema validation for JSON, JSONC, YAML, and TOML in CI and editors, using one external TypeScript configuration. Correctly composes parser and validator adapters in a CLI, a stdio language server, and bundled VS Code and Zed extensions.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -8,9 +8,10 @@ pnpm build
 pnpm test
 pnpm check
 pnpm build:vsix
+pnpm build:zed
 ```
 
-The installable extension is `artifacts/Correctly-0.0.0.vsix`. Install it with `code --install-extension artifacts/Correctly-0.0.0.vsix`. Packages and extensions have not been published.
+Builds use the Correctly package version: install `artifacts/Correctly-<version>.vsix` with `code --install-extension`. For Zed, install the `wasm32-wasip2` Rust target before building, then select `artifacts/Correctly-<version>.zed` through **Install Dev Extension**. The Zed archive is shareable; recipients need no Rust toolchain. See the [Zed setup guide](packages/correctly/docs/guide.md#zed). Packages and extensions have not been published.
 
 Try the complete example:
 

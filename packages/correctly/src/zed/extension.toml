@@ -1,0 +1,20 @@
+id = "correctly"
+name = "Correctly"
+version = "0.0.0"
+schema_version = 1
+authors = ["Jeremy Banka"]
+description = "JSON Schema validation and editor hints from one external configuration"
+repository = "https://github.com/jeremybanka/correctly"
+
+# No [lib] declaration: Zed's dev installer must load the precompiled WASM
+# without attempting to compile Rust on the recipient's machine.
+[language_servers.correctly]
+name = "Correctly"
+languages = ["JSON", "JSONC", "YAML", "TOML"]
+opt_in_languages = ["JSON", "JSONC", "YAML", "TOML"]
+
+[language_servers.correctly.language_ids]
+JSON = "json"
+JSONC = "jsonc"
+YAML = "yaml"
+TOML = "toml"
