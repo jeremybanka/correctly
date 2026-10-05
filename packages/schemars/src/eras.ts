@@ -21,6 +21,30 @@ export const schemarsEras = Object.freeze([
 			"0.8.22",
 		] as const),
 	}),
+	Object.freeze({
+		since: "0.9.0",
+		versions: Object.freeze(["0.9.0"] as const),
+	}),
+	Object.freeze({
+		since: "1.0.0",
+		versions: Object.freeze(["1.0.0", "1.0.1", "1.0.2", "1.0.3"] as const),
+	}),
+	Object.freeze({
+		since: "1.0.4",
+		versions: Object.freeze(["1.0.4", "1.0.5"] as const),
+	}),
+	Object.freeze({
+		since: "1.1.0",
+		versions: Object.freeze(["1.1.0"] as const),
+	}),
+	Object.freeze({
+		since: "1.2.0",
+		versions: Object.freeze(["1.2.0"] as const),
+	}),
+	Object.freeze({
+		since: "1.2.1",
+		versions: Object.freeze(["1.2.1", "1.2.2"] as const),
+	}),
 ] as const satisfies readonly EraDefinition[])
 
 /** One of the compatibility eras reviewed by this package. */

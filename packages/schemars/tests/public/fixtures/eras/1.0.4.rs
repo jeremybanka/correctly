@@ -83,7 +83,7 @@ fn main() {
         bytes::Bytes, either::Either<u16, String>,
         indexmap2::IndexMap<String, u16>,
         semver::Version, smallvec::SmallVec<[u16; 4]>,
-        smol_str02::SmolStr, smol_str03::SmolStr, serde_json::Value, serde_json::value::RawValue,
+        smol_str02::SmolStr, serde_json::Value, serde_json::value::RawValue,
         schemars::Schema,
     );
     println!(

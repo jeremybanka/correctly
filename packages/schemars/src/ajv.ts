@@ -56,8 +56,52 @@ function partialDateTime(value: string): boolean {
 }
 formats["partial-date-time"] = { type: "string", validate: partialDateTime }
 
+const modernFormats = { ...formats }
+delete modernFormats.phone
+modernFormats["partial-date-time"] = {
+	type: "string",
+	validate: (value: string) => value.includes("T") && partialDateTime(value),
+}
+modernFormats["partial-time"] = {
+	type: "string",
+	validate: (value: string) => !value.includes("T") && partialDateTime(value),
+}
+modernFormats.duration = {
+	type: "string",
+	// ISO 8601 Temporal serialization shared by Jiff Span and SignedDuration.
+	validate: (value: string) =>
+		/^-?P(?=\d|T\d)(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?=\d)(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d{1,9})?S)?)?$/.test(
+			value,
+		),
+}
+modernFormats["zoned-date-time"] = {
+	type: "string",
+	validate: (value: string) => {
+		const match =
+			/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?)(Z|[+-]\d{2}:\d{2}(?::\d{2})?)\[([A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*|[+-]\d{2}:\d{2}(?::\d{2})?)\]$/.exec(
+				value,
+			)
+		if (!match || !partialDateTime(match[1]!)) return false
+		const validOffset = (offset: string) =>
+			offset === "Z" ||
+			(Number(offset.slice(1, 3)) <= 23 &&
+				Number(offset.slice(4, 6)) <= 59 &&
+				Number(offset.slice(7, 9) || 0) <= 59)
+		return (
+			validOffset(match[2]!) &&
+			(!/^[+-]/.test(match[3]!) || validOffset(match[3]!))
+		)
+	},
+}
+
 const implementations = {
 	"0.8.15": formats,
+	"0.9.0": modernFormats,
+	"1.0.0": modernFormats,
+	"1.0.4": modernFormats,
+	"1.1.0": modernFormats,
+	"1.2.0": modernFormats,
+	"1.2.1": modernFormats,
 } satisfies Record<SchemarsEra["since"], typeof formats>
 
 /** Select one reviewed schema contract, using an exact release or closed range. */

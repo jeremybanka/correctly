@@ -39,6 +39,10 @@ export function configurationTypes(dynamic: string): AjvExtension[] {
 	schemars({ version: ">=0.8.22 <=0.8.15" })
 	// @ts-expect-error Open ranges are not reviewed selections.
 	schemars({ version: ">=0.8.15" })
+	// @ts-expect-error Reviewed endpoints cannot cross generated-schema eras.
+	schemars({ version: ">=0.8.22 <=1.2.2" })
+	// @ts-expect-error Even adjacent releases with changed output are separate eras.
+	schemars({ version: ">=1.2.0 <=1.2.1" })
 	// @ts-expect-error Caret ranges are not reviewed selections.
 	schemars({ version: "^0.8.15" })
 	// @ts-expect-error Prereleases are not reviewed selections.
@@ -53,6 +57,9 @@ export function configurationTypes(dynamic: string): AjvExtension[] {
 	era.versions.push(unknownEra)
 
 	return [
+		schemars({ version: "1.2.2" }),
+		schemars({ version: ">=1.2.1 <=1.2.2" }),
+		schemars({ version: ">=1.0.0 <=1.0.3" }),
 		schemars({ version: since }),
 		schemars({ version: exact }),
 		schemars({ version: range }),

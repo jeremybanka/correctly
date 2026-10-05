@@ -146,7 +146,7 @@
 			"prCreation": "immediate",
 			"prBodyNotes": [
 				"The Schemars contract check must fail on this initial dependency update, even if schemas are unchanged. Identical output requires extending the current era; changed output requires a new era beginning at this release. Preserve every historical pin/fixture, add behavioral coverage and a new @correctlyjs/schemars changeset naming this Schemars version.",
-				"CI prevents skipping stable releases. If Renovate proposes a later patch or stream, review and release the intervening versions first. Every reviewed Schemars release requires its own published @correctlyjs/schemars version."
+				"CI prevents skipping stable releases. If Renovate proposes a later patch or stream, include and review every intervening stable version in order with its own pinned generator, contract, and changeset. Consecutive reviewed releases may ship together in one @correctlyjs/schemars publication; the previous merged checkpoint must already be published."
 			]
 		}
 	]

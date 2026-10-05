@@ -3,6 +3,7 @@ import { expect, test } from "vite-plus/test"
 import {
 	reviewCandidate,
 	requireChangeset,
+	requireReleaseChangesets,
 	requireNextRelease,
 	requirePreviousRelease,
 	pinnedVersion,
@@ -14,7 +15,7 @@ import {
 import fixture from "../public/fixtures/eras/0.8.15.json" with { type: "json" }
 import { schemarsEras } from "../../src/eras.ts"
 
-const catalog = { eras: schemarsEras }
+const catalog = { eras: [schemarsEras[0]] }
 
 const current: Contracts = { catalog, fixtures: { "0.8.15": fixture } }
 const previous: Contracts = {
@@ -102,7 +103,7 @@ test("a reviewed version cannot silently change its output", () => {
 		"SCHEMARS_CONTRACT_DRIFT",
 	)
 })
-test("multiple new versions cannot share one upgrade PR", () => {
+test("each review step must approve exactly one new version", () => {
 	const earlier = {
 		...previous,
 		catalog: {
@@ -136,6 +137,23 @@ test.each(
 )
 test("a new extension changeset must name the reviewed release", () => {
 	expect(() => requireChangeset("0.8.22", [patch])).not.toThrow()
+})
+test("a consecutive batch requires a distinct changeset for every release", () => {
+	expect(() =>
+		requireReleaseChangesets(
+			["0.8.21", "0.8.22"],
+			[patch.replace("0.8.22", "0.8.21"), patch],
+		),
+	).not.toThrow()
+	expect(() => requireReleaseChangesets(["0.8.21", "0.8.22"], [patch])).toThrow(
+		"SCHEMARS_CHANGESET_REQUIRED",
+	)
+	expect(() =>
+		requireReleaseChangesets(
+			["0.8.21", "0.8.22"],
+			[patch.replace("0.8.22", "0.8.21 and 0.8.22")],
+		),
+	).toThrow("SCHEMARS_CHANGESET_REQUIRED")
 })
 test("pending Schemars changesets must ship before another update", () => {
 	expect(() => requirePreviousRelease("0.8.22", [patch])).toThrow(
@@ -174,7 +192,7 @@ test("overlapping era definitions are rejected", () => {
 	).toThrow("SCHEMARS_INVALID_ERA")
 })
 test("every historical crate and derive dependency is locked at its exact advertised version", () => {
-	for (const era of catalog.eras)
+	for (const era of schemarsEras)
 		for (const version of era.versions) {
 			const root = new URL(
 				`../public/fixtures/versions/${version}/`,

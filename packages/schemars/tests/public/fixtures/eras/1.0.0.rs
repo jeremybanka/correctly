@@ -64,11 +64,6 @@ fn main() {
         i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64,
         NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
         NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
-        std::sync::atomic::AtomicI8, std::sync::atomic::AtomicI16,
-        std::sync::atomic::AtomicI32, std::sync::atomic::AtomicI64,
-        std::sync::atomic::AtomicIsize, std::sync::atomic::AtomicU8,
-        std::sync::atomic::AtomicU16, std::sync::atomic::AtomicU32,
-        std::sync::atomic::AtomicU64, std::sync::atomic::AtomicUsize,
         IpAddr, Ipv4Addr, Ipv6Addr, String, bool, char, (),
         std::net::SocketAddr, std::path::PathBuf, std::time::Duration,
         std::ops::Range<u16>, std::ops::Bound<i16>, Wrapper, Attributes,
@@ -83,7 +78,7 @@ fn main() {
         bytes::Bytes, either::Either<u16, String>,
         indexmap2::IndexMap<String, u16>,
         semver::Version, smallvec::SmallVec<[u16; 4]>,
-        smol_str02::SmolStr, smol_str03::SmolStr, serde_json::Value, serde_json::value::RawValue,
+        smol_str02::SmolStr, serde_json::Value, serde_json::value::RawValue,
         schemars::Schema,
     );
     println!(
