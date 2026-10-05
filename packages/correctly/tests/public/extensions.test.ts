@@ -216,7 +216,7 @@ test("imported implementations assert values and preserve strict schema checks",
 })
 
 test("version selection is exact and extension identifiers cannot replace implementations", async () => {
-	for (const version of ["0.8", "^0.8.22", "1.2.2"])
+	for (const version of ["0.8", "^0.8.22", "1.2.3"])
 		expect(() => schemars({ version: version as "0.8.22" })).toThrow(
 			"Unsupported Schemars version",
 		)

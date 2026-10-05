@@ -4,6 +4,7 @@ import path from "node:path"
 import { stripTypeScriptTypes } from "node:module"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
+import { compareVersions } from "../packages/schemars/src/select-era.ts"
 import {
 	CATALOG,
 	FIXTURES,
@@ -16,7 +17,7 @@ import {
 	verifyHistoricalInputs,
 	validateCatalog,
 	reviewCandidate,
-	requireChangeset,
+	requireReleaseChangesets,
 	requireNextRelease,
 	requirePreviousRelease,
 	type Contracts,
@@ -121,22 +122,33 @@ export async function checkSchemars(
 		path.join(outputDir, `${candidate}.json`),
 		`${JSON.stringify(actual, null, 2)}\n`,
 	)
-	reviewCandidate(candidate, actual, current, previous)
+	reviewCandidate(candidate, actual, current)
 	if (previous)
 		verifyHistoricalInputs(
 			previous,
 			(file) => git("show", `${base}:${file}`),
 			read,
 		)
-	const newRelease =
-		!previous ||
-		!previous.catalog.eras.some((era) => era.versions.includes(candidate))
-	if (baseFiles && newRelease) {
+	const oldVersions = new Set(
+		previous?.catalog.eras.flatMap((era) => era.versions),
+	)
+	const additions = current.catalog.eras
+		.flatMap((era) => era.versions)
+		.filter((version) => !oldVersions.has(version))
+	if (previous && additions.length && additions.at(-1) !== candidate)
+		throw new ContractFailure(
+			"SCHEMARS_CANDIDATE_REQUIRED",
+			"The probe must pin the last newly reviewed release.",
+		)
+	if (baseFiles && (!previous || additions.length)) {
 		const added = git("ls-files", ".changeset/*.md")
 			.trim()
 			.split("\n")
 			.filter((file) => file && !baseFiles.has(file))
-		requireChangeset(candidate, added.map(read))
+		requireReleaseChangesets(
+			previous ? additions : [candidate],
+			added.map(read),
+		)
 		if (previousVersion) {
 			requirePreviousRelease(
 				previousVersion,
@@ -168,9 +180,14 @@ export async function checkSchemars(
 				.trim()
 				.split("\n")
 				.map((line) => (JSON.parse(line) as { vers: string }).vers)
-			requireNextRelease(previousVersion, candidate, releases)
+			let from = previousVersion
+			for (const version of previous ? additions : [candidate]) {
+				requireNextRelease(from, version, releases)
+				from = version
+			}
 		}
 	}
+	let reviewed = previous
 	for (const era of current.catalog.eras) {
 		for (const version of era.versions) {
 			const corpus = generate(
@@ -182,11 +199,30 @@ export async function checkSchemars(
 					"SCHEMARS_CONTRACT_DRIFT",
 					`Historical Schemars ${version} no longer reproduces era ${era.since}. Preserve the original fixture and resolve the generator drift.`,
 				)
+			if (previous && !oldVersions.has(version)) {
+				const through: Contracts = {
+					catalog: {
+						eras: current.catalog.eras
+							.filter((entry) => compareVersions(entry.since, version) <= 0)
+							.map((entry) => ({
+								...entry,
+								versions: entry.versions.filter(
+									(v) => compareVersions(v, version) <= 0,
+								),
+							})),
+					},
+					fixtures: current.fixtures,
+				}
+				reviewCandidate(version, corpus, through, reviewed)
+				reviewed = through
+			}
 			console.log(
 				`Schemars ${version}: reproduced era ${era.since} (${Object.keys(corpus.schemas).length} schemas).`,
 			)
 		}
 	}
+	if (previous && !additions.length)
+		reviewCandidate(candidate, actual, current, previous)
 	console.log(
 		`Schemars ${candidate}: reviewed; all pinned compatibility contracts passed.`,
 	)

@@ -1,0 +1,744 @@
+{
+  "schemas": {
+    "i8": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int8",
+      "type": "integer",
+      "format": "int8",
+      "minimum": -128,
+      "maximum": 127
+    },
+    "i16": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int16",
+      "type": "integer",
+      "format": "int16",
+      "minimum": -32768,
+      "maximum": 32767
+    },
+    "i32": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int32",
+      "type": "integer",
+      "format": "int32"
+    },
+    "i64": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int64",
+      "type": "integer",
+      "format": "int64"
+    },
+    "i128": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int128",
+      "type": "integer",
+      "format": "int128"
+    },
+    "isize": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "int",
+      "type": "integer",
+      "format": "int"
+    },
+    "u8": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint8",
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "u16": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint16",
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "u32": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint32",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "u64": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint64",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "u128": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint128",
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 0
+    },
+    "usize": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "uint",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "f32": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "float",
+      "type": "number",
+      "format": "float"
+    },
+    "f64": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "double",
+      "type": "number",
+      "format": "double"
+    },
+    "NonZeroI8": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroI8",
+      "type": "integer",
+      "format": "int8",
+      "minimum": -128,
+      "maximum": 127,
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroI16": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroI16",
+      "type": "integer",
+      "format": "int16",
+      "minimum": -32768,
+      "maximum": 32767,
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroI32": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroI32",
+      "type": "integer",
+      "format": "int32",
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroI64": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroI64",
+      "type": "integer",
+      "format": "int64",
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroI128": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroI128",
+      "type": "integer",
+      "format": "int128",
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroIsize": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroIsize",
+      "type": "integer",
+      "format": "int",
+      "not": {
+        "const": 0
+      }
+    },
+    "NonZeroU8": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroU8",
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "NonZeroU16": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroU16",
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "NonZeroU32": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroU32",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 1
+    },
+    "NonZeroU64": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroU64",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1
+    },
+    "NonZeroU128": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroU128",
+      "type": "integer",
+      "format": "uint128",
+      "minimum": 1
+    },
+    "NonZeroUsize": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NonZeroUsize",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 1
+    },
+    "IpAddr": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "ip",
+      "type": "string",
+      "format": "ip"
+    },
+    "Ipv4Addr": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "ipv4",
+      "type": "string",
+      "format": "ipv4"
+    },
+    "Ipv6Addr": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "ipv6",
+      "type": "string",
+      "format": "ipv6"
+    },
+    "String": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "string",
+      "type": "string"
+    },
+    "bool": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "boolean",
+      "type": "boolean"
+    },
+    "char": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Character",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1
+    },
+    "()": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "null",
+      "type": "null"
+    },
+    "std::net::SocketAddr": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "string",
+      "type": "string"
+    },
+    "std::path::PathBuf": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "string",
+      "type": "string"
+    },
+    "std::time::Duration": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Duration",
+      "type": "object",
+      "properties": {
+        "secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "nanos": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "secs",
+        "nanos"
+      ]
+    },
+    "std::ops::Range<u16>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Range_of_uint16",
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "end": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "std::ops::Bound<i16>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Bound_of_int16",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Included": {
+              "type": "integer",
+              "format": "int16",
+              "minimum": -32768,
+              "maximum": 32767
+            }
+          },
+          "required": [
+            "Included"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Excluded": {
+              "type": "integer",
+              "format": "int16",
+              "minimum": -32768,
+              "maximum": 32767
+            }
+          },
+          "required": [
+            "Excluded"
+          ]
+        },
+        {
+          "type": "string",
+          "const": "Unbounded"
+        }
+      ]
+    },
+    "Wrapper": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Wrapper",
+      "type": "object",
+      "properties": {
+        "optional": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int8",
+            "minimum": -128,
+            "maximum": 127
+          }
+        },
+        "tuple": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "result": {
+          "$ref": "#/$defs/Result_of_uint64_or_string"
+        }
+      },
+      "required": [
+        "list",
+        "tuple",
+        "result"
+      ],
+      "$defs": {
+        "Result_of_uint64_or_string": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "Ok": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "Ok"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "Err": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "Err"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "Attributes": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Attributes",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "email",
+        "url"
+      ]
+    },
+    "chrono::NaiveDate": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NaiveDate",
+      "type": "string",
+      "format": "date"
+    },
+    "chrono::NaiveTime": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NaiveTime",
+      "type": "string",
+      "format": "partial-time"
+    },
+    "chrono::NaiveDateTime": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "NaiveDateTime",
+      "type": "string",
+      "format": "partial-date-time"
+    },
+    "chrono::DateTime<chrono::Utc>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "DateTime",
+      "type": "string",
+      "format": "date-time"
+    },
+    "chrono::Weekday": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Weekday",
+      "type": "string",
+      "enum": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ]
+    },
+    "chrono::TimeDelta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "TimeDelta",
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "format": "int64"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "exclusiveMaximum": 1000000000
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "jiff::civil::Date": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Date",
+      "type": "string",
+      "format": "date"
+    },
+    "jiff::civil::Time": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Time",
+      "type": "string",
+      "format": "partial-time"
+    },
+    "jiff::civil::DateTime": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "DateTime",
+      "type": "string",
+      "format": "partial-date-time"
+    },
+    "jiff::Timestamp": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Timestamp",
+      "type": "string",
+      "format": "date-time"
+    },
+    "jiff::Zoned": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Zoned",
+      "type": "string",
+      "format": "zoned-date-time"
+    },
+    "jiff::SignedDuration": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "SignedDuration",
+      "type": "string",
+      "format": "duration"
+    },
+    "jiff::Span": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Span",
+      "type": "string",
+      "format": "duration"
+    },
+    "EnumMap": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "EnumMap",
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        }
+      },
+      "required": [
+        "values"
+      ]
+    },
+    "Flattened": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Flattened",
+      "type": "object",
+      "enum": [
+        "One",
+        "Two"
+      ]
+    },
+    "FlattenedOptional": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "FlattenedOptional",
+      "type": "object",
+      "enum": [
+        "One",
+        "Two"
+      ]
+    },
+    "Recursive": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Recursive",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "next": {
+          "anyOf": [
+            {
+              "$ref": "#"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "Transformed": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Transformed",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 2
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "uuid1::Uuid": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Uuid",
+      "type": "string",
+      "format": "uuid"
+    },
+    "url::Url": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Url",
+      "type": "string",
+      "format": "uri"
+    },
+    "arrayvec07::ArrayVec<u16, 4>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Array_up_to_size_4_of_uint16",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint16",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "maxItems": 4
+    },
+    "bigdecimal04::BigDecimal": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Decimal",
+      "type": [
+        "string",
+        "number"
+      ],
+      "pattern": "^-?\\d+(\\.\\d+)?([eE]\\d+)?$"
+    },
+    "rust_decimal::Decimal": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Decimal",
+      "type": [
+        "string",
+        "number"
+      ],
+      "pattern": "^-?\\d+(\\.\\d+)?([eE]\\d+)?$"
+    },
+    "bytes::Bytes": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Bytes",
+      "type": [
+        "array",
+        "string"
+      ],
+      "items": {
+        "type": "integer",
+        "format": "uint8",
+        "minimum": 0,
+        "maximum": 255
+      }
+    },
+    "either::Either<u16, String>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Either_uint16_or_string",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Left": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "Left"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Right": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "Right"
+          ]
+        }
+      ]
+    },
+    "indexmap2::IndexMap<String, u16>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Map_of_uint16",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint16",
+        "minimum": 0,
+        "maximum": 65535
+      }
+    },
+    "semver::Version": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "SemVer",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "smallvec::SmallVec<[u16; 4]>": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Array_of_uint16",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint16",
+        "minimum": 0,
+        "maximum": 65535
+      }
+    },
+    "smol_str02::SmolStr": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "string",
+      "type": "string"
+    },
+    "serde_json::Value": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnyValue"
+    },
+    "serde_json::value::RawValue": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnyValue"
+    },
+    "schemars::Schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Schema",
+      "type": [
+        "object",
+        "boolean"
+      ]
+    }
+  }
+}
