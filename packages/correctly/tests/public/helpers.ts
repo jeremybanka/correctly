@@ -33,7 +33,7 @@ export type TestConfig = {
 		name?: string
 		files: string[]
 		schema: string | null
-		mode?: "json" | "jsonc"
+		mode?: "json" | "jsonc" | "yaml" | "toml"
 		extensions?: string[]
 	}[]
 	remote?: ProjectConfig["remote"]
@@ -64,7 +64,7 @@ export function configSource(config: TestConfig, built = false): string {
  }`,
 	)
 	const { associations: _rules, exclude, ...rest } = config
-	return `import { defineConfig, GITIGNORE, json, jsonc } from ${JSON.stringify(core)}
+	return `import { defineConfig, GITIGNORE, json, jsonc, yaml, toml } from ${JSON.stringify(core)}
 import { ajv } from ${JSON.stringify(adapter)}
 ${config.associations.some((rule) => rule.extensions?.some((id) => id.startsWith("schemars@"))) ? `import { schemars } from ${JSON.stringify(extension)}` : ""}
 import { renovate } from ${JSON.stringify(renovate)}

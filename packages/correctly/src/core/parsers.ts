@@ -1,5 +1,7 @@
 import type { Parser } from "./adapters.ts"
 import { parseDocument } from "./parse.ts"
+import { parseYaml } from "./yaml.ts"
+import { parseToml } from "./toml.ts"
 
 export function json(): Parser {
 	return {
@@ -18,5 +20,23 @@ export function jsonc(): Parser {
 	}
 }
 export function defaultParser(file: string): Parser {
-	return file.toLowerCase().endsWith(".jsonc") ? jsonc() : json()
+	switch (file.slice(file.lastIndexOf(".")).toLowerCase()) {
+		case ".jsonc":
+			return jsonc()
+		case ".yaml":
+		case ".yml":
+			return yaml()
+		case ".toml":
+			return toml()
+		default:
+			return json()
+	}
+}
+
+export function yaml(): Parser {
+	return { id: "yaml", valueModel: "json", parse: parseYaml }
+}
+
+export function toml(): Parser {
+	return { id: "toml", valueModel: "json", parse: parseToml }
 }

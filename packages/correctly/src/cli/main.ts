@@ -6,7 +6,7 @@ import { failure, type Report } from "../core/types.ts"
 const HELP = `correctly check [files...] [--config path] [--offline] [--format readable|json]
 correctly-lsp --stdio
 
-Validate JSON/JSONC using associations in correctly.config.ts.
+Validate JSON, JSONC, YAML and TOML using associations in correctly.config.ts.
 Exit 0: valid; 1: document errors; 2: configuration, schema, or execution errors.
 Formatting does not affect validation. See the package guide for configuration.
 `

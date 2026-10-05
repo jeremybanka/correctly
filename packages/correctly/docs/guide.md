@@ -44,9 +44,9 @@ Rename `correctly.config.json` to `correctly.config.ts`, export a `defineConfig`
 
 Editors choose the longest workspace root containing a file, then search upward from the file's directory, stopping at that root. Nested configurations override parent configurations completely. Sibling roots remain independent. Missing configurations become editor diagnostics. Executable configuration and imported modules must be saved before discovery or reload. Unsaved edits to those files never execute. Unsaved data and JSON Schema buffers still affect validation.
 
-File patterns, exclusions, local schema paths, and cache paths resolve from the configuration directory. Patterns use forward slashes, can match dotfiles, and must be relative without `..` or leading `!`. Use `exclude` instead of negated patterns. `files` defaults to `**/*.json` and `**/*.jsonc`. Built-in exclusions cover `node_modules`, `.git`, `dist`, `artifacts`, and `.correctly-cache`; configured cache directories inside the project are also excluded. User exclusions add to these defaults. Excluded files are skipped.
+File patterns, exclusions, local schema paths, and cache paths resolve from the configuration directory. Patterns use forward slashes, can match dotfiles, and must be relative without `..` or leading `!`. Use `exclude` instead of negated patterns. `files` defaults to `**/*.json`, `**/*.jsonc`, `**/*.yaml`, `**/*.yml`, and `**/*.toml`. Built-in exclusions cover `node_modules`, `.git`, `dist`, `artifacts`, and `.correctly-cache`; configured cache directories inside the project are also excluded. User exclusions add to these defaults. Excluded files are skipped.
 
-Associations are ordered: the **last matching rule wins**. `parse` selects a parser implementation; omitting it selects JSONC for `.jsonc` and strict JSON otherwise. `validate: null` explicitly requests syntax-only coverage. Unassociated included documents are also syntax-checked and reported as `syntax-only`; missing coverage does not fail the command. Reports include the matched index, name, optional schema URI, parser ID (`mode`), validator ID, extension IDs and coverage. Association patterns do not expand the project's `files` list: include custom file extensions there as well.
+Associations are ordered: the **last matching rule wins**. `parse` selects a parser implementation; omitting it selects JSONC for `.jsonc`, YAML for `.yaml`/`.yml`, TOML for `.toml`, and strict JSON otherwise. Extension detection is case-insensitive; file patterns retain their usual case-sensitive matching. `validate: null` explicitly requests syntax-only coverage. Unassociated included documents are also syntax-checked and reported as `syntax-only`; missing coverage does not fail the command. Reports include the matched index, name, optional schema URI, parser ID (`mode`), validator ID, extension IDs and coverage. Association patterns do not expand the project's `files` list: include custom file extensions there as well.
 
 ### Gitignore exclusions
 
@@ -67,13 +67,58 @@ CLI discovery skips ignored files. Explicit CLI paths and core validation report
 
 ## Parsing and validation
 
-Strict JSON rejects comments and trailing commas; JSONC allows both. Both modes reject duplicate object keys, including escaped duplicates, and preserve useful source ranges and JSON pointers. Incomplete editor documents receive syntax diagnostics and tolerant completion/hover; Ajv validates values only once syntax is valid. UTF-16 ranges are zero-based and compatible with LSP; readable CLI locations are one-based. Duplicate-key diagnostics point to the second key, value errors point to the value, disallowed-property errors point to the key, and missing-property errors point to the containing object's start and retain the missing property's pointer.
+Strict JSON rejects comments and trailing commas; JSONC allows both. Both modes reject duplicate object keys, including escaped duplicates, and preserve useful source ranges and JSON pointers. Incomplete editor documents receive syntax diagnostics; JSON/JSONC also receive tolerant completion/hover; Ajv validates values only once syntax is valid. UTF-16 ranges are zero-based and compatible with LSP; readable CLI locations are one-based. Duplicate-key diagnostics point to the second key, value errors point to the value, disallowed-property errors point to the key, and missing-property errors point to the containing object's start and retain the missing property's pointer.
 
 Document `$schema` is always ordinary data. It is neither removed nor used to select a schema, and a schema can reject that property with `additionalProperties: false`. This also holds for editor hints and unassociated documents. Schema documents' own `$schema` fields retain dialect meaning.
 
 Ajv provides authoritative validation in both CLI and LSP. Separate instances support draft 7 and draft 2020-12, including prefixItems, unevaluatedProperties, and dynamic references. Root schemas without `$schema` default to draft 7; referenced resources without one inherit the referencing dialect. Unknown dialects, mixed-dialect graphs, unsupported required vocabularies, unresolved references, invalid schemas, and unknown validation keywords fail visibly. Standard 2020-12 core/applicator/unevaluated/validation/metadata/format-annotation/content vocabularies are recognized. Required format-assertion vocabulary and custom required vocabularies are not supported. ajv-formats applies its supported format checks in both drafts; unknown formats fail compilation. Content decoding/validation is not performed. `$async` is unsupported.
 
 Descriptive Microsoft schema extensions, such as `markdownDescription`, `enumDescriptions`, and `defaultSnippets`, are treated as annotations. No values are coerced, no defaults are inserted, and no properties are removed. Formatting is outside validation.
+
+## YAML and TOML
+
+The exported `yaml()` and `toml()` factories implement the same `Parser` contract as `json()` and `jsonc()`, with `valueModel: "json"`. Omitting `parse` detects the format by extension; explicit factories also work with other filenames:
+
+```ts
+import { defineConfig, yaml, toml } from "correctly"
+import { ajv } from "correctly/validators/ajv"
+
+export default defineConfig({
+	files: ["config/**/*.{yaml,yml,toml}"],
+	associations: [
+		{
+			files: ["config/**/*.{yaml,yml}"],
+			parse: yaml(),
+			validate: ajv({ schema: "schemas/application.json" }),
+		},
+		{
+			files: ["config/**/*.toml"],
+			parse: toml(),
+			validate: ajv({ schema: "schemas/application.json" }),
+		},
+	],
+})
+```
+
+```yaml
+# config/application.yaml
+name: application
+color: blue
+```
+
+```toml
+# config/application.toml
+name = "application"
+color = "blue"
+```
+
+YAML accepts one YAML 1.2 document using the core scalar schema: booleans, null, numbers, and strings, including block strings. Empty YAML documents are null. Mapping keys must be strings; quote numeric or boolean-looking keys. Block and flow collections are supported. Anchors and aliases resolve to JSON values; errors within an alias point to its use. Cyclic aliases and more than 100 alias expansions fail. Merge keys (`<<`) are ordinary string keys, with no implicit merging. YAML 1.1 directives, unknown/custom tags, complex keys, and multiple documents fail visibly.
+
+TOML uses version 1.0. Tables, dotted/quoted keys, inline tables, arrays, and arrays of tables map to JSON objects and arrays. Empty TOML documents are empty objects. Date and time literals validate as strings using their parsed spelling, preserving local values and offset information without converting them to UTC. TOML has no null value. Duplicate keys or table redefinitions fail with `duplicate-key`; the parser reports the offending key segment, without a JSON pointer. Other parse errors use `syntax`.
+
+YAML and TOML both reject non-finite numbers and integers outside JavaScript's safe integer range (−9,007,199,254,740,991 through 9,007,199,254,740,991). Numeric values use binary64; floating-point decimals may round. `rawNumber(pointer)` preserves the exact numeric scalar token, including hexadecimal notation or TOML underscores, and returns undefined for nonnumeric or missing paths. For YAML aliases it returns the anchored number's token while `locate` points to the alias use. A raw token is metadata in the source format, not a guarantee of lossless value validation or a JSON number string. Custom validators can consume it explicitly; Ajv continues to validate the parsed value.
+
+All formats validate only after parsing succeeds. Nested validation errors retain JSON pointers and locations in the original source, including TOML table headers and dotted key segments. Syntax-only rules use `validate: null`. These parsers also compose with custom validators accepting the `json` value model. They omit `editorLanguage`, so YAML/TOML receive diagnostics without JSON completion or hover.
 
 ## Schema extensions
 
@@ -241,9 +286,9 @@ Readable reports use terminal colors automatically: bold file names, red error c
 
 ## Editor installation and shared APIs
 
-From the repository, run `pnpm build:vsix`, then `code --install-extension artifacts/Correctly-0.0.0.vsix`. The extension requires VS Code 1.105 or later: its [pinned Electron 37.6.0 runtime](https://github.com/microsoft/vscode/blob/1.105.0/.npmrc) includes [Node 22.19](https://releases.electronjs.org/release/v37.6.0), which supports native TypeScript configuration loading. The universal VSIX bundles the client, server and project worker. Configuration imports resolve from the project, so install Correctly and any adapter dependencies there. Open a trusted workspace with a configuration to activate it. All file documents can reach the server; project patterns select which ones are checked. Missing configurations produce diagnostics for JSON/JSONC; unrelated languages without a configuration remain quiet. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
+From the repository, run `pnpm build:vsix`, then `code --install-extension artifacts/Correctly-0.0.0.vsix`. The extension requires VS Code 1.105 or later: its [pinned Electron 37.6.0 runtime](https://github.com/microsoft/vscode/blob/1.105.0/.npmrc) includes [Node 22.19](https://releases.electronjs.org/release/v37.6.0), which supports native TypeScript configuration loading. The universal VSIX bundles the client, server and project worker. Configuration imports resolve from the project, so install Correctly and any adapter dependencies there. Open a trusted workspace with a configuration to activate it. All file documents can reach the server; project patterns select which ones are checked. Missing configurations produce diagnostics for JSON, JSONC, YAML, and TOML; unrelated languages without a configuration remain quiet. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
 
-Microsoft's JSON language service supplies completions and hover. Its AST is retained with traversal methods bound to the original document; a selection view disables automatic embedded `$schema` selection. Ajv remains the validation authority. Built-in VS Code JSON features may independently provide suggestions/diagnostics; set `json.validate.enable` to `false` to use only Correctly validation, if desired.
+Microsoft's JSON language service supplies completions and hover for JSON/JSONC. YAML and TOML currently receive validation diagnostics only. Its AST is retained with traversal methods bound to the original document; a selection view disables automatic embedded `$schema` selection. Ajv remains the validation authority. Built-in VS Code JSON features may independently provide suggestions/diagnostics; set `json.validate.enable` to `false` to use only Correctly validation, if desired.
 
 The package root exports `loadProject`, `Engine`, `SchemaStore`, parser/location utilities, configuration discovery/matching, and report/diagnostic types:
 
@@ -260,4 +305,4 @@ try {
 }
 ```
 
-The core owns association and adapter lifecycle without depending on Ajv or a JSON AST. `loadProject` is a one-shot Comline load using native module caching; long-running embedders must create fresh worker/module contexts when configuration imports change. CLI and LSP already do this. Built-in parsers cover JSON/JSONC; other parsers can compose today through the public interface, provided they define value semantics and source mappings precisely.
+The core owns association and adapter lifecycle without depending on Ajv or a JSON AST. `loadProject` is a one-shot Comline load using native module caching; long-running embedders must create fresh worker/module contexts when configuration imports change. CLI and LSP already do this. Built-in parsers cover JSON, JSONC, YAML, and TOML; other parsers can compose today through the public interface, provided they define value semantics and source mappings precisely.

@@ -75,6 +75,86 @@ describe("bundled distribution", () => {
 		await client.open(uri, "{")
 		expect((await client.wait(uri, 1)).diagnostics).toEqual([])
 	})
+	test.each(["yaml", "toml"] as const)(
+		"%s adapters work in the built CLI and isolated VSIX worker",
+		async (mode) => {
+			const { root } = await builtProject(undefined, {
+				files: ["data/**"],
+				associations: [{ files: ["data/**"], schema: "schema.json", mode }],
+			})
+			const file = await put(
+				root,
+				`data/app.${mode}`,
+				mode === "yaml" ? "name: 42" : "name = 42",
+			)
+			const cli = spawnSync(
+				process.execPath,
+				[path.join(packageRoot, "dist/cli.mjs"), "check", "--format=json"],
+				{ cwd: root, encoding: "utf8" },
+			)
+			expect(cli.status).toBe(1)
+			const report = JSON.parse(cli.stdout)
+			expect(report).toMatchObject({
+				reportVersion: 2,
+				summary: { validated: 1, schemaCovered: 1 },
+			})
+			expect(
+				report.files.find((f: { file: string }) => f.file === file),
+			).toMatchObject({
+				mode,
+				association: { validator: "ajv" },
+				diagnostics: [{ code: "schema/type", pointer: "/name" }],
+			})
+			const isolated = await temp()
+			await cp(stage, path.join(isolated, "extension"), { recursive: true })
+			const manifest = JSON.parse(
+				await readFile(path.join(isolated, "extension/package.json"), "utf8"),
+			) as {
+				activationEvents: string[]
+				capabilities: { untrustedWorkspaces: { supported: boolean } }
+			}
+			expect(manifest.activationEvents).toContain(`onLanguage:${mode}`)
+			expect(manifest.capabilities.untrustedWorkspaces.supported).toBe(false)
+			expect(existsSync(path.join(isolated, "extension/node_modules"))).toBe(
+				false,
+			)
+			const client = await lspClient(
+				[root],
+				path.join(isolated, "extension/dist/server.mjs"),
+				isolated,
+			)
+			const uri = pathToFileURL(file).href
+			await client.open(
+				uri,
+				mode === "yaml" ? "name: 42" : "name = 42",
+				1,
+				mode,
+			)
+			expect((await client.wait(uri, 1)).diagnostics[0]?.code).toBe(
+				"schema/type",
+			)
+			await client.change(
+				uri,
+				mode === "yaml" ? "name: valid" : 'name = "valid"',
+				2,
+			)
+			expect((await client.wait(uri, 2)).diagnostics).toEqual([])
+			expect(
+				(
+					await client.request<CompletionList>("textDocument/completion", uri, {
+						line: 0,
+						character: 2,
+					})
+				).items,
+			).toEqual([])
+			expect(
+				await client.request<Hover | null>("textDocument/hover", uri, {
+					line: 0,
+					character: 2,
+				}),
+			).toBeNull()
+		},
+	)
 	test("VSIX stages a thin client and a fully bundled stdio server", async () => {
 		const { root, uri } = await builtProject()
 		const isolated = await temp()

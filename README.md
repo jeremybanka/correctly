@@ -1,6 +1,6 @@
 # Correctly
 
-JSON Schema validation for CI and editors, using one external configuration. Correctly wraps Ajv in a CLI, a stdio language server, and a bundled VS Code extension. JSON and JSONC are the initial formats; the core separates parsing from validation for future YAML and TOML support.
+JSON Schema validation for JSON, JSONC, YAML, and TOML in CI and editors, using one external TypeScript configuration. Correctly composes parser and validator adapters in a CLI, a stdio language server, and a bundled VS Code extension.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -18,7 +18,7 @@ Try the complete example:
 node packages/correctly/dist/cli.mjs check --config packages/correctly/examples/basic/correctly.config.ts
 ```
 
-Open the example directory as a VS Code workspace to see diagnostics, property/value completion, and schema descriptions on hover. Both editor and CLI use `correctly.config.ts`; documents need no embedded schema link. Formatting is handled by your formatter.
+Open the example directory as a trusted VS Code workspace to see diagnostics for all four formats, with property/value completion and schema descriptions on hover for JSON/JSONC. Both editor and CLI use `correctly.config.ts`; documents need no embedded schema link. Formatting is handled by your formatter.
 
 To try schema violations and source excerpts, run `pnpm exec correctly check --config demo/correctly.config.ts`. The [demo materials](demo/README.md) include a valid document and two deliberately invalid documents; the full demo exits 1.
 

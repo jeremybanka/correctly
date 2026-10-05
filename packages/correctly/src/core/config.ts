@@ -11,6 +11,13 @@ import { CorrectlyError, type Association } from "./types.ts"
 export const CONFIG_NAME = "correctly.config.ts"
 /** Opt into project-local .gitignore rules in the exclude array. */
 export const GITIGNORE = Symbol.for("correctly.gitignore.v1")
+export const DEFAULT_FILES = [
+	"**/*.json",
+	"**/*.jsonc",
+	"**/*.yaml",
+	"**/*.yml",
+	"**/*.toml",
+]
 export const DEFAULT_EXCLUDES = [
 	"**/node_modules/**",
 	"**/.git/**",
@@ -302,10 +309,7 @@ export function isIncluded(project: Project, file: string): boolean {
 	const relative = path.relative(project.root, file).split(path.sep).join("/")
 	const options = { dot: true }
 	return (
-		picomatch(
-			project.config.files ?? ["**/*.json", "**/*.jsonc"],
-			options,
-		)(relative) &&
+		picomatch(project.config.files ?? DEFAULT_FILES, options)(relative) &&
 		!picomatch(exclusions(project), options)(relative) &&
 		!isGitignored(project, relative)
 	)

@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { glob } from "tinyglobby"
-import { discoverConfig, exclusions, isIncluded } from "../core/config.ts"
+import {
+	DEFAULT_FILES,
+	discoverConfig,
+	exclusions,
+	isIncluded,
+} from "../core/config.ts"
 import { ProjectSession } from "../runtime/session.ts"
 import { Engine } from "../core/engine.ts"
 import { failure, type Report } from "../core/types.ts"
@@ -73,7 +78,7 @@ export async function checkProject(
 		await engine.prepare()
 		const files = options.files?.length
 			? options.files.map((f) => path.resolve(cwd, f))
-			: await glob(project.config.files ?? ["**/*.json", "**/*.jsonc"], {
+			: await glob(project.config.files ?? DEFAULT_FILES, {
 					cwd: project.root,
 					ignore: exclusions(project),
 					absolute: true,
