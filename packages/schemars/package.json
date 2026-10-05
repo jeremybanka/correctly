@@ -37,7 +37,7 @@
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {
-		"correctly": "^0.1.1"
+		"correctly": "^0.1.2"
 	},
 	"engines": {
 		"node": ">=22.18.0"

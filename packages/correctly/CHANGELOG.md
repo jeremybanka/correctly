@@ -1,5 +1,11 @@
 # correctly
 
+## 0.1.2
+
+### Patch Changes
+
+- 810ab1d: Add composable YAML and TOML parser adapters with default file discovery, numeric lexemes, source locations, CLI reports, and editor diagnostics through the shared project runtime.
+
 ## 0.1.1
 
 ### Patch Changes
