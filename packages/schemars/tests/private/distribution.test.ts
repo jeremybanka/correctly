@@ -101,9 +101,15 @@ export default defineConfig({ files: ["data.json"], associations: [{ files: ["da
 			const manifest = JSON.parse(
 				await readFile(path.join(installed, "package.json"), "utf8"),
 			)
+			// Changesets can update this range on a Version Packages PR.
+			const sourceManifest = JSON.parse(
+				await readFile(path.join(packageRoot, "package.json"), "utf8"),
+			) as { peerDependencies: { correctly: string } }
 			expect(manifest).toMatchObject({
 				name: "@correctlyjs/schemars",
-				peerDependencies: { correctly: "^0.1.0" },
+				peerDependencies: {
+					correctly: sourceManifest.peerDependencies.correctly,
+				},
 				publishConfig: { access: "public" },
 			})
 			expect(manifest.dependencies).toBeUndefined()
