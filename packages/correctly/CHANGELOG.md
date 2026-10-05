@@ -1,5 +1,11 @@
 # correctly
 
+## 0.1.1
+
+### Patch Changes
+
+- 9e58df7: Export GITIGNORE for opt-in project-local .gitignore exclusions shared by the CLI, core, and editor.
+
 ## 0.1.0
 
 ### Minor Changes
