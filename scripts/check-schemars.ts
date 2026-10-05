@@ -56,7 +56,17 @@ async function contracts(
 		),
 	}
 }
-function generate(manifest: string, expected: string): Corpus {
+type GenerationTiming = {
+	version: string
+	manifest: string
+	durationMs: number
+}
+function generate(
+	manifest: string,
+	expected: string,
+	timings: GenerationTiming[],
+): Corpus {
+	const started = performance.now()
 	if (pinnedVersion(read(manifest)) !== expected)
 		throw new Error(`Generator ${manifest} must pin ${expected}`)
 	verifyLock(read(path.join(path.dirname(manifest), "Cargo.lock")), expected)
@@ -85,11 +95,18 @@ function generate(manifest: string, expected: string): Corpus {
 	const corpus = JSON.parse(output) as Corpus
 	if (!corpus.schemas || typeof corpus.schemas !== "object")
 		throw new Error("Generator must output a schemas object")
+	timings.push({
+		version: expected,
+		manifest,
+		durationMs: Math.round(performance.now() - started),
+	})
 	return corpus
 }
 export async function checkSchemars(
 	base = process.env.SCHEMARS_BASE_REF,
 ): Promise<void> {
+	const started = performance.now()
+	const timings: GenerationTiming[] = []
 	const current = await contracts(read)
 	validateCatalog(current)
 	let previous: Contracts | undefined
@@ -108,7 +125,7 @@ export async function checkSchemars(
 	const candidate = pinnedVersion(read(PROBE))
 	let actual: Corpus
 	try {
-		actual = generate(PROBE, candidate)
+		actual = generate(PROBE, candidate, timings)
 	} catch (error) {
 		if (error instanceof ContractFailure) throw error
 		const stderr = (error as { stderr?: string }).stderr
@@ -193,6 +210,7 @@ export async function checkSchemars(
 			const corpus = generate(
 				`${FIXTURES}/versions/${version}/Cargo.toml`,
 				version,
+				timings,
 			)
 			if (!isDeepStrictEqual(corpus, current.fixtures[era.since]))
 				throw new ContractFailure(
@@ -223,6 +241,10 @@ export async function checkSchemars(
 	}
 	if (previous && !additions.length)
 		reviewCandidate(candidate, actual, current, previous)
+	writeFileSync(
+		path.join(outputDir, "generation-timings.json"),
+		`${JSON.stringify({ durationMs: Math.round(performance.now() - started), generators: timings }, null, 2)}\n`,
+	)
 	console.log(
 		`Schemars ${candidate}: reviewed; all pinned compatibility contracts passed.`,
 	)

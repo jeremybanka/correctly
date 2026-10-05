@@ -3,7 +3,7 @@ import { cp, readFile, symlink } from "node:fs/promises"
 import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { describe, expect, test } from "vite-plus/test"
+import { beforeAll, describe, expect, test } from "vite-plus/test"
 import type { CompletionList, Hover } from "vscode-languageserver/node"
 import {
 	setup,
@@ -32,9 +32,16 @@ async function builtProject(schema?: unknown, config?: TestConfig) {
 	return result
 }
 const stage = path.join(repoRoot, "artifacts/.correctly-vsix")
-describe.runIf(
-	existsSync(stage) && existsSync(path.join(packageRoot, "dist/cli.mjs")),
-)("bundled distribution", () => {
+describe("bundled distribution", () => {
+	beforeAll(() => {
+		if (
+			!existsSync(stage) ||
+			!existsSync(path.join(packageRoot, "dist/cli.mjs"))
+		)
+			throw new Error(
+				"Run pnpm run build and pnpm run build:vsix before pnpm run test:distribution.",
+			)
+	})
 	test("VSIX stages a thin client and a fully bundled stdio server", async () => {
 		const { root, uri } = await builtProject()
 		const isolated = await temp()

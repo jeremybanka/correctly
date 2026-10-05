@@ -3,18 +3,23 @@ import { existsSync } from "node:fs"
 import { cp, mkdir, readFile, symlink } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { describe, expect, test } from "vite-plus/test"
+import { beforeAll, describe, expect, test } from "vite-plus/test"
 import { temp, put } from "../../../correctly/tests/public/helpers.ts"
 import { lspClient } from "../../../correctly/tests/public/lsp-client.ts"
 
 const packageRoot = fileURLToPath(new URL("../../", import.meta.url))
 const coreRoot = path.resolve(packageRoot, "../correctly")
 const stage = path.resolve(packageRoot, "../../artifacts/.correctly-vsix")
-describe.runIf(
-	existsSync(path.join(packageRoot, "dist/index.mjs")) &&
-		existsSync(path.join(packageRoot, "dist/ajv.mjs")) &&
-		existsSync(stage),
-)("published extension boundary", () => {
+describe("published extension boundary", () => {
+	beforeAll(() => {
+		if (
+			!existsSync(stage) ||
+			!existsSync(path.join(packageRoot, "dist/ajv.mjs"))
+		)
+			throw new Error(
+				"Run pnpm run build and pnpm run build:vsix before pnpm run test:distribution.",
+			)
+	})
 	test(
 		"the packed plugin is installed by the project and shared by CLI and isolated VSIX",
 		{ timeout: 20_000 },
