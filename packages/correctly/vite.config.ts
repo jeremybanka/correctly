@@ -27,6 +27,6 @@ export default defineConfig({
 	],
 	test: {
 		include: ["tests/**/*.test.ts"],
-		exclude: ["tests/private/distribution.test.ts"],
+		exclude: ["tests/private/*distribution.test.ts"],
 	},
 })

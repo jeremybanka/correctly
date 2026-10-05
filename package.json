@@ -6,10 +6,11 @@
 	"scripts": {
 		"build": "vp run -r build",
 		"build:vsix": "pnpm --filter correctly build:vsix",
+		"build:zed": "pnpm --filter correctly build:zed",
 		"check": "pnpm run \"/^check:.*/\"",
-		"check:fmt": "dprint check",
+		"check:fmt": "dprint check && cargo fmt --manifest-path packages/correctly/src/zed/Cargo.toml -- --check",
 		"check:vp": "vp check --no-fmt",
-		"fmt": "dprint fmt",
+		"fmt": "dprint fmt && cargo fmt --manifest-path packages/correctly/src/zed/Cargo.toml",
 		"test": "vp run -r test",
 		"test:watch": "vp run -r --parallel --no-cache test:watch",
 		"change": "changeset",

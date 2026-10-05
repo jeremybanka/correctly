@@ -290,6 +290,45 @@ From the repository, run `pnpm build:vsix`, then `code --install-extension artif
 
 Microsoft's JSON language service supplies completions and hover for JSON/JSONC. YAML and TOML currently receive validation diagnostics only. Its AST is retained with traversal methods bound to the original document; a selection view disables automatic embedded `$schema` selection. Ajv remains the validation authority. Built-in VS Code JSON features may independently provide suggestions/diagnostics; set `json.validate.enable` to `false` to use only Correctly validation, if desired.
 
+### Zed
+
+The Zed extension ships precompiled WASM with the same bundled server and worker as the VSIX. Only the person building it needs Rust and Cargo. Install the `wasm32-wasip2` target for the repository's Rust toolchain and run `pnpm build:zed`:
+
+```sh
+rustup target add wasm32-wasip2
+pnpm build:zed
+```
+
+The build uses `tar` and writes `artifacts/Correctly-<version>.zed/` and a shareable `artifacts/Correctly-<version>.zed.tar.gz` archive, using the package version. Extract the archive into a permanent directory, open Zed's Extensions view, click **Install Dev Extension**, and select the extracted directory. For your own build, select the generated directory directly. Zed links to that directory, so keep it in place. The artifact deliberately omits `Cargo.toml` and a Rust library declaration; Zed loads its existing `extension.wasm` without compiling Rust. Select the artifact, not `src/zed`.
+
+Use a current Zed release supporting extension API 0.7.0. The adapter uses Zed's Node runtime; Correctly requires Node 22.18 or later. Enable Correctly only in projects you trust: starting the server executes `correctly.config.ts` and its imports. Project-local `correctly` and adapter dependencies are still required for those imports. Add this to the trusted project's `.zed/settings.json`:
+
+```json
+{
+	"languages": {
+		"JSON": { "language_servers": ["correctly", "..."] },
+		"JSONC": { "language_servers": ["correctly", "..."] },
+		"YAML": { "language_servers": ["correctly", "..."] },
+		"TOML": { "language_servers": ["correctly", "..."] }
+	}
+}
+```
+
+The `"..."` entry keeps other registered language servers enabled. They can produce independent diagnostics or suggestions; use `["correctly"]` for a language if you want Correctly as its sole server. Configure your formatter separately. Zed's existing language support supplies syntax highlighting; install YAML or TOML support if those languages are not recognized. Correctly attaches to these four languages; custom parser file types require an additional language association. Diagnostics cover all four formats; completion and hover cover JSON/JSONC. Unsaved data/schema buffers and saved configuration/import changes use the existing LSP lifecycle and dynamic file watchers.
+
+To select a Node executable, set `lsp.correctly.binary.path` to an absolute Node 22.18+ path. Its optional `arguments` are Node flags prepended to the bundled server path and `--stdio`; optional `env` values override the worktree shell environment. For example:
+
+```json
+{
+	"lsp": {
+		"correctly": {
+			"binary": { "path": "/absolute/path/to/node" }
+		}
+	}
+```
+
+Install updates by selecting the new artifact directory with **Install Dev Extension**; use **editor: restart language server** if needed. The WASM writes its embedded server/worker into Zed's extension work directory under a package-version directory, preserving already-running workers' paths. **zed: open log** shows launch failures. The [extension README](../src/zed/README.md) travels with the artifact and repeats the sideload instructions.
+
 The package root exports `loadProject`, `Engine`, `SchemaStore`, parser/location utilities, configuration discovery/matching, and report/diagnostic types:
 
 ```ts

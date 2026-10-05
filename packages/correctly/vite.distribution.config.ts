@@ -1,5 +1,5 @@
 import { defineConfig } from "vite-plus"
 
 export default defineConfig({
-	test: { include: ["tests/private/distribution.test.ts"] },
+	test: { include: ["tests/private/*distribution.test.ts"] },
 })
