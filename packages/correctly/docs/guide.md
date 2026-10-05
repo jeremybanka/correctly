@@ -48,6 +48,23 @@ File patterns, exclusions, local schema paths, and cache paths resolve from the 
 
 Associations are ordered: the **last matching rule wins**. `parse` selects a parser implementation; omitting it selects JSONC for `.jsonc` and strict JSON otherwise. `validate: null` explicitly requests syntax-only coverage. Unassociated included documents are also syntax-checked and reported as `syntax-only`; missing coverage does not fail the command. Reports include the matched index, name, optional schema URI, parser ID (`mode`), validator ID, extension IDs and coverage. Association patterns do not expand the project's `files` list: include custom file extensions there as well.
 
+### Gitignore exclusions
+
+Import `GITIGNORE` to opt into `.gitignore` rules alongside ordinary exclusion patterns:
+
+```ts
+import { defineConfig, GITIGNORE } from "correctly"
+
+export default defineConfig({
+	exclude: [GITIGNORE, "config/generated/**"],
+	associations: [],
+})
+```
+
+Without `GITIGNORE`, ignore files have no effect. Rules are case-sensitive and come from `.gitignore` in the configuration directory and applicable subdirectories. Nested rules override parent rules; comments, anchored paths, directory patterns, escapes, and `!` re-inclusions follow Git ignore syntax. A file cannot be re-included while its parent directory is excluded. Re-inclusions do not override ordinary `exclude` patterns or built-in exclusions. Ancestor ignore files above the configuration directory, Git's global excludes, and `.git/info/exclude` are outside this scope. No Git installation or repository is required.
+
+CLI discovery skips ignored files. Explicit CLI paths and core validation report them as `excluded`; editor diagnostics and hints are suppressed. Saved creation, edits, and deletion of `.gitignore` files refresh editor exclusions. Core inclusion checks cache ignore files for the project; load a fresh project to pick up saved changes.
+
 ## Parsing and validation
 
 Strict JSON rejects comments and trailing commas; JSONC allows both. Both modes reject duplicate object keys, including escaped duplicates, and preserve useful source ranges and JSON pointers. Incomplete editor documents receive syntax diagnostics and tolerant completion/hover; Ajv validates values only once syntax is valid. UTF-16 ranges are zero-based and compatible with LSP; readable CLI locations are one-based. Duplicate-key diagnostics point to the second key, value errors point to the value, disallowed-property errors point to the key, and missing-property errors point to the containing object's start and retain the missing property's pointer.

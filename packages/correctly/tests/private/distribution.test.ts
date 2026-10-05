@@ -13,6 +13,7 @@ import {
 	type TestConfig,
 } from "../public/helpers.ts"
 import { lspClient } from "../public/lsp-client.ts"
+import { GITIGNORE } from "../../src/core/index.ts"
 
 const packageRoot = fileURLToPath(new URL("../../", import.meta.url))
 const repoRoot = path.resolve(packageRoot, "../..")
@@ -35,6 +36,38 @@ const stage = path.join(repoRoot, "artifacts/.correctly-vsix")
 describe.runIf(
 	existsSync(stage) && existsSync(path.join(packageRoot, "dist/cli.mjs")),
 )("bundled distribution", () => {
+	test("built CLI and isolated VSIX recognize GITIGNORE from the published config export", async () => {
+		const { root, uri } = await builtProject(undefined, {
+			exclude: [GITIGNORE],
+			files: ["data/**"],
+			associations: [{ files: ["data/**"], schema: "schema.json" }],
+		})
+		await put(root, ".gitignore", "data/test.json\n")
+		await put(root, "data/test.json", "{")
+		const run = spawnSync(
+			process.execPath,
+			[
+				path.join(packageRoot, "dist/cli.mjs"),
+				"check",
+				"data/test.json",
+				"--format=json",
+			],
+			{ cwd: root, encoding: "utf8" },
+		)
+		expect(run.status).toBe(0)
+		expect(JSON.parse(run.stdout)).toMatchObject({
+			files: [{ coverage: "excluded", diagnostics: [], failures: [] }],
+		})
+		const isolated = await temp()
+		await cp(stage, path.join(isolated, "extension"), { recursive: true })
+		const client = await lspClient(
+			[root],
+			path.join(isolated, "extension/dist/server.mjs"),
+			isolated,
+		)
+		await client.open(uri, "{")
+		expect((await client.wait(uri, 1)).diagnostics).toEqual([])
+	})
 	test("VSIX stages a thin client and a fully bundled stdio server", async () => {
 		const { root, uri } = await builtProject()
 		const isolated = await temp()

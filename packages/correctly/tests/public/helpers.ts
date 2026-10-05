@@ -3,7 +3,11 @@ import os from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { afterEach } from "vite-plus/test"
-import { loadProject, type ProjectConfig } from "../../src/core/config.ts"
+import {
+	GITIGNORE,
+	loadProject,
+	type ProjectConfig,
+} from "../../src/core/config.ts"
 import { Engine } from "../../src/core/engine.ts"
 
 const temporary: string[] = []
@@ -24,7 +28,7 @@ export async function temp(): Promise<string> {
 }
 export type TestConfig = {
 	files?: string[]
-	exclude?: string[]
+	exclude?: ProjectConfig["exclude"]
 	associations: {
 		name?: string
 		files: string[]
@@ -59,12 +63,12 @@ export function configSource(config: TestConfig, built = false): string {
   validate: ${schema === null ? "null" : `ajv({ schema: ${JSON.stringify(schema)}, extensions: [${(extensions ?? []).map((id) => (id.startsWith("schemars@") ? `schemars({ version: ${JSON.stringify(id.slice("schemars@".length))} })` : id === "renovate" ? "renovate()" : JSON.stringify(id))).join(",")}] })`},
  }`,
 	)
-	const { associations: _rules, ...rest } = config
-	return `import { defineConfig, json, jsonc } from ${JSON.stringify(core)}
+	const { associations: _rules, exclude, ...rest } = config
+	return `import { defineConfig, GITIGNORE, json, jsonc } from ${JSON.stringify(core)}
 import { ajv } from ${JSON.stringify(adapter)}
 ${config.associations.some((rule) => rule.extensions?.some((id) => id.startsWith("schemars@"))) ? `import { schemars } from ${JSON.stringify(extension)}` : ""}
 import { renovate } from ${JSON.stringify(renovate)}
-export default defineConfig({ ...${JSON.stringify(rest)}, associations: [${rules.join(",\n")}] })`
+export default defineConfig({ ...${JSON.stringify(rest)}, ${exclude ? `exclude: [${exclude.map((item) => (item === GITIGNORE ? "GITIGNORE" : JSON.stringify(item))).join(",")}],` : ""} associations: [${rules.join(",\n")}] })`
 }
 export async function put(
 	root: string,
