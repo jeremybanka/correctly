@@ -1,5 +1,21 @@
 # @correctlyjs/schemars
 
+## 0.0.2
+
+### Patch Changes
+
+- e56c065: Review Schemars 0.9.0 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.0 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.1 and extend compatibility era 1.0.0 with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.2 and extend compatibility era 1.0.0 with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.3 and extend compatibility era 1.0.0 with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.4 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.0.5 and extend compatibility era 1.0.4 with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.1.0 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.2.0 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.2.1 and add its generated schema compatibility era with a pinned generator and behavioral coverage.
+- e56c065: Review Schemars 1.2.2 and extend compatibility era 1.2.1 with a pinned generator and behavioral coverage.
+
 ## 0.0.1
 
 ### Patch Changes

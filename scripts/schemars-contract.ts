@@ -178,7 +178,7 @@ export function reviewCandidate(
 		)
 			fail(
 				"SCHEMARS_ONE_RELEASE_REQUIRED",
-				"Review one new Schemars release per PR so each receives its own @correctlyjs/schemars release.",
+				"Compare one new Schemars release at each review step; review a consecutive sequence in order with its own pinned generators and changesets.",
 			)
 	}
 }
@@ -200,8 +200,22 @@ export function requireChangeset(
 	if (!changesets.some((text) => changesetNamesRelease(text, version)))
 		fail(
 			"SCHEMARS_CHANGESET_REQUIRED",
-			`Add a new @correctlyjs/schemars changeset naming Schemars ${version}. Every newly reviewed Schemars release ships an @correctlyjs/schemars release, including unchanged schemas.`,
+			`Add a new @correctlyjs/schemars changeset naming Schemars ${version}. Every newly reviewed Schemars release needs release notes, including unchanged schemas.`,
 		)
+}
+/** Each upstream release needs a distinct changeset, even in a batch. */
+export function requireReleaseChangesets(
+	versions: readonly string[],
+	changesets: readonly string[],
+): void {
+	const remaining = [...changesets]
+	for (const version of versions) {
+		requireChangeset(version, remaining)
+		remaining.splice(
+			remaining.findIndex((text) => changesetNamesRelease(text, version)),
+			1,
+		)
+	}
 }
 /** A newer pending bot PR must not silently skip intervening stable releases. */
 export function requireNextRelease(
@@ -220,7 +234,7 @@ export function requireNextRelease(
 	if (skipped.length)
 		fail(
 			"SCHEMARS_RELEASES_SKIPPED",
-			`Review and release Schemars ${skipped[0]} first; this update skips ${skipped.join(", ")}. Each Schemars release needs its own @correctlyjs/schemars release.`,
+			`Review Schemars ${skipped[0]} first; this review step skips ${skipped.join(", ")}. Include every intervening stable release's pin, contract, and changeset.`,
 		)
 }
 

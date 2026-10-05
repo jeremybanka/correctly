@@ -10,6 +10,9 @@ test.each([
 	">=0.8.15 <=0.8.22",
 	">=0.8.17 <=0.8.20",
 	">=0.8.22 <=0.8.22",
+	">=1.0.0 <=1.0.3",
+	">=1.0.4 <=1.0.5",
+	">=1.2.1 <=1.2.2",
 ])(
 	"%s selects the reviewed assertions through executable configuration",
 	async (version) => {
@@ -38,7 +41,7 @@ test.each([
 test.each([
 	"0.8.14",
 	"0.8.23",
-	"1.2.2",
+	"1.2.3",
 	"^0.8.15",
 	"0.8",
 	"*",
@@ -55,15 +58,12 @@ test.each([
 	)
 })
 test("ranges crossing compatibility eras fail instead of unioning incompatible assertions", () => {
-	expect(() =>
-		selectSchemarsEra(">=0.8.22 <=1.0.0", [
-			...schemarsEras,
-			{ since: "1.0.0", versions: ["1.0.0"] },
-		]),
-	).toThrow("crosses compatibility eras")
+	expect(() => selectSchemarsEra(">=0.8.22 <=1.0.0")).toThrow(
+		"crosses compatibility eras",
+	)
 })
 test("the public era catalog cannot be mutated by configuration code", () => {
 	expect(Reflect.set(schemarsEras[0].versions, 8, "0.8.23")).toBe(false)
 	expect(Reflect.set(schemarsEras[0], "since", "0.8.23")).toBe(false)
-	expect(Reflect.set(schemarsEras, 1, {})).toBe(false)
+	expect(Reflect.set(schemarsEras, schemarsEras.length, {})).toBe(false)
 })

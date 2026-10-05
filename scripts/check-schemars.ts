@@ -4,6 +4,7 @@ import path from "node:path"
 import { stripTypeScriptTypes } from "node:module"
 import { fileURLToPath } from "node:url"
 import { isDeepStrictEqual } from "node:util"
+import { compareVersions } from "../packages/schemars/src/select-era.ts"
 import {
 	CATALOG,
 	FIXTURES,
@@ -16,7 +17,7 @@ import {
 	verifyHistoricalInputs,
 	validateCatalog,
 	reviewCandidate,
-	requireChangeset,
+	requireReleaseChangesets,
 	requireNextRelease,
 	requirePreviousRelease,
 	type Contracts,
@@ -55,7 +56,17 @@ async function contracts(
 		),
 	}
 }
-function generate(manifest: string, expected: string): Corpus {
+type GenerationTiming = {
+	version: string
+	manifest: string
+	durationMs: number
+}
+function generate(
+	manifest: string,
+	expected: string,
+	timings: GenerationTiming[],
+): Corpus {
+	const started = performance.now()
 	if (pinnedVersion(read(manifest)) !== expected)
 		throw new Error(`Generator ${manifest} must pin ${expected}`)
 	verifyLock(read(path.join(path.dirname(manifest), "Cargo.lock")), expected)
@@ -84,11 +95,18 @@ function generate(manifest: string, expected: string): Corpus {
 	const corpus = JSON.parse(output) as Corpus
 	if (!corpus.schemas || typeof corpus.schemas !== "object")
 		throw new Error("Generator must output a schemas object")
+	timings.push({
+		version: expected,
+		manifest,
+		durationMs: Math.round(performance.now() - started),
+	})
 	return corpus
 }
 export async function checkSchemars(
 	base = process.env.SCHEMARS_BASE_REF,
 ): Promise<void> {
+	const started = performance.now()
+	const timings: GenerationTiming[] = []
 	const current = await contracts(read)
 	validateCatalog(current)
 	let previous: Contracts | undefined
@@ -107,7 +125,7 @@ export async function checkSchemars(
 	const candidate = pinnedVersion(read(PROBE))
 	let actual: Corpus
 	try {
-		actual = generate(PROBE, candidate)
+		actual = generate(PROBE, candidate, timings)
 	} catch (error) {
 		if (error instanceof ContractFailure) throw error
 		const stderr = (error as { stderr?: string }).stderr
@@ -121,22 +139,33 @@ export async function checkSchemars(
 		path.join(outputDir, `${candidate}.json`),
 		`${JSON.stringify(actual, null, 2)}\n`,
 	)
-	reviewCandidate(candidate, actual, current, previous)
+	reviewCandidate(candidate, actual, current)
 	if (previous)
 		verifyHistoricalInputs(
 			previous,
 			(file) => git("show", `${base}:${file}`),
 			read,
 		)
-	const newRelease =
-		!previous ||
-		!previous.catalog.eras.some((era) => era.versions.includes(candidate))
-	if (baseFiles && newRelease) {
+	const oldVersions = new Set(
+		previous?.catalog.eras.flatMap((era) => era.versions),
+	)
+	const additions = current.catalog.eras
+		.flatMap((era) => era.versions)
+		.filter((version) => !oldVersions.has(version))
+	if (previous && additions.length && additions.at(-1) !== candidate)
+		throw new ContractFailure(
+			"SCHEMARS_CANDIDATE_REQUIRED",
+			"The probe must pin the last newly reviewed release.",
+		)
+	if (baseFiles && (!previous || additions.length)) {
 		const added = git("ls-files", ".changeset/*.md")
 			.trim()
 			.split("\n")
 			.filter((file) => file && !baseFiles.has(file))
-		requireChangeset(candidate, added.map(read))
+		requireReleaseChangesets(
+			previous ? additions : [candidate],
+			added.map(read),
+		)
 		if (previousVersion) {
 			requirePreviousRelease(
 				previousVersion,
@@ -168,25 +197,54 @@ export async function checkSchemars(
 				.trim()
 				.split("\n")
 				.map((line) => (JSON.parse(line) as { vers: string }).vers)
-			requireNextRelease(previousVersion, candidate, releases)
+			let from = previousVersion
+			for (const version of previous ? additions : [candidate]) {
+				requireNextRelease(from, version, releases)
+				from = version
+			}
 		}
 	}
+	let reviewed = previous
 	for (const era of current.catalog.eras) {
 		for (const version of era.versions) {
 			const corpus = generate(
 				`${FIXTURES}/versions/${version}/Cargo.toml`,
 				version,
+				timings,
 			)
 			if (!isDeepStrictEqual(corpus, current.fixtures[era.since]))
 				throw new ContractFailure(
 					"SCHEMARS_CONTRACT_DRIFT",
 					`Historical Schemars ${version} no longer reproduces era ${era.since}. Preserve the original fixture and resolve the generator drift.`,
 				)
+			if (previous && !oldVersions.has(version)) {
+				const through: Contracts = {
+					catalog: {
+						eras: current.catalog.eras
+							.filter((entry) => compareVersions(entry.since, version) <= 0)
+							.map((entry) => ({
+								...entry,
+								versions: entry.versions.filter(
+									(v) => compareVersions(v, version) <= 0,
+								),
+							})),
+					},
+					fixtures: current.fixtures,
+				}
+				reviewCandidate(version, corpus, through, reviewed)
+				reviewed = through
+			}
 			console.log(
 				`Schemars ${version}: reproduced era ${era.since} (${Object.keys(corpus.schemas).length} schemas).`,
 			)
 		}
 	}
+	if (previous && !additions.length)
+		reviewCandidate(candidate, actual, current, previous)
+	writeFileSync(
+		path.join(outputDir, "generation-timings.json"),
+		`${JSON.stringify({ durationMs: Math.round(performance.now() - started), generators: timings }, null, 2)}\n`,
+	)
 	console.log(
 		`Schemars ${candidate}: reviewed; all pinned compatibility contracts passed.`,
 	)

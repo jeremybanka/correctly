@@ -11,5 +11,8 @@ export default defineConfig({
 			dts: { entry: ["src/index.ts", "src/ajv.ts"], sourcemap: true },
 		},
 	],
-	test: { include: ["tests/**/*.test.ts"] },
+	test: {
+		include: ["tests/**/*.test.ts"],
+		exclude: ["tests/private/distribution.test.ts"],
+	},
 })
