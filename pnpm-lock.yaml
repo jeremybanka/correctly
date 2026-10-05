@@ -220,6 +220,9 @@ importers:
       comline:
         specifier: 0.9.0
         version: 0.9.0
+      ignore:
+        specifier: 7.0.12
+        version: 7.0.12
       jsonc-parser:
         specifier: 3.3.1
         version: 3.3.1
@@ -1755,6 +1758,10 @@ packages:
   human-id@4.2.1:
     resolution: {integrity: sha512-zPGsiS+dWoTZtZ4AtpA9Y+BdSFSNWvnouNlWNoUFyAM6xHOHmdCvqO3k8AIbdamCOv4gUFUVNPf6rJFfc4UiJw==}
     hasBin: true
+
+  ignore@7.0.12:
+    resolution: {integrity: sha512-/8UvqAPU9DGTI9k4mxtf49U37Isfwr8Uts96+SBHIkFxPJnHS0Ew4f00sM4Scd8V8EjM0jUNtVDdv1kPdt35lg==}
+    engines: {node: '>= 4'}
 
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
@@ -3489,6 +3496,8 @@ snapshots:
       - supports-color
 
   human-id@4.2.1: {}
+
+  ignore@7.0.12: {}
 
   import-meta-resolve@4.2.0: {}
 

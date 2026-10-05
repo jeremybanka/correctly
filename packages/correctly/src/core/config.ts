@@ -5,9 +5,12 @@ import { cli } from "comline"
 import picomatch from "picomatch"
 import type { Parser, Validator } from "./adapters.ts"
 import { defaultParser } from "./parsers.ts"
+import { GitIgnore } from "./gitignore.ts"
 import { CorrectlyError, type Association } from "./types.ts"
 
 export const CONFIG_NAME = "correctly.config.ts"
+/** Opt into project-local .gitignore rules in the exclude array. */
+export const GITIGNORE = Symbol.for("correctly.gitignore.v1")
 export const DEFAULT_EXCLUDES = [
 	"**/node_modules/**",
 	"**/.git/**",
@@ -24,7 +27,7 @@ export type RemoteOptions = {
 }
 export type ProjectConfig = {
 	files?: string[]
-	exclude?: string[]
+	exclude?: (string | typeof GITIGNORE)[]
 	associations: {
 		name?: string
 		files: string[]
@@ -57,13 +60,14 @@ function string(value: unknown, location: string): asserts value is string {
 	if (typeof value !== "string" || !value.length)
 		throw new CorrectlyError("config", `${location} must be a nonempty string`)
 }
-function patterns(value: unknown, location: string): void {
+function patterns(value: unknown, location: string, gitignore = false): void {
 	if (!Array.isArray(value) || !value.length)
 		throw new CorrectlyError(
 			"config",
 			`${location} must be a nonempty array of relative patterns`,
 		)
 	for (const item of value) {
+		if (gitignore && item === GITIGNORE) continue
 		string(item, location)
 		if (/^(?:[!/]|[A-Za-z]:)|(?:^|\/)\.\.(?:\/|$)|\\/.test(item))
 			throw new CorrectlyError(
@@ -79,7 +83,7 @@ export function defineConfig<T extends ProjectConfig>(config: T): T {
 export function validateConfig(value: unknown): ProjectConfig {
 	object(value, "config", ["files", "exclude", "associations", "remote"])
 	for (const key of ["files", "exclude"])
-		if (value[key] !== undefined) patterns(value[key], key)
+		if (value[key] !== undefined) patterns(value[key], key, key === "exclude")
 	if (!Array.isArray(value.associations))
 		throw new CorrectlyError("config", "associations must be an array")
 	for (const [index, rule] of value.associations.entries()) {
@@ -282,12 +286,16 @@ export function exclusions(project: Project): string[] {
 		.join("/")
 	return [
 		...DEFAULT_EXCLUDES,
-		...(project.config.exclude ?? []),
+		...(project.config.exclude ?? []).filter(
+			(item) => typeof item === "string",
+		),
 		...(relative && contains(project.root, cachePath)
 			? [`${relative}/**`]
 			: []),
 	]
 }
+
+const gitignores = new WeakMap<Project, GitIgnore>()
 
 export function isIncluded(project: Project, file: string): boolean {
 	if (!contains(project.root, file)) return false
@@ -297,8 +305,20 @@ export function isIncluded(project: Project, file: string): boolean {
 		picomatch(
 			project.config.files ?? ["**/*.json", "**/*.jsonc"],
 			options,
-		)(relative) && !picomatch(exclusions(project), options)(relative)
+		)(relative) &&
+		!picomatch(exclusions(project), options)(relative) &&
+		!isGitignored(project, relative)
 	)
+}
+
+function isGitignored(project: Project, relative: string): boolean {
+	if (!relative || !project.config.exclude?.includes(GITIGNORE)) return false
+	let gitignore = gitignores.get(project)
+	if (!gitignore) {
+		gitignore = new GitIgnore(project.root)
+		gitignores.set(project, gitignore)
+	}
+	return gitignore.ignores(relative)
 }
 
 export function associationFor(

@@ -43,6 +43,7 @@ export class Workspace {
 	resourceChanged(uri: string): boolean {
 		return (
 			uri.endsWith(`/${CONFIG_NAME}`) ||
+			uri.endsWith("/.gitignore") ||
 			this.isSchema(uri) ||
 			this.moduleUris.has(uri) ||
 			/\/(?:package\.json|pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/.test(

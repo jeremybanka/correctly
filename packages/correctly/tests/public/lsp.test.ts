@@ -3,8 +3,53 @@ import path from "node:path"
 import type { CompletionList, Hover } from "vscode-languageserver/node"
 import { expect, test } from "vite-plus/test"
 import { check } from "../../src/cli/check.ts"
+import { GITIGNORE } from "../../src/core/index.ts"
+import { rm } from "node:fs/promises"
 import { lspClient } from "./lsp-client.ts"
 import { put, setup, configSource } from "./helpers.ts"
+
+test("gitignore creation, changes, and deletion refresh editor diagnostics and hints", async () => {
+	const { root, uri } = await setup(undefined, {
+		exclude: [GITIGNORE],
+		files: ["data/**"],
+		associations: [{ files: ["data/**"], schema: "schema.json" }],
+	})
+	const client = await lspClient([root])
+	await client.open(uri, '{"name":2}')
+	expect((await client.wait(uri, 1)).diagnostics[0]?.code).toBe("schema/type")
+	const ignorePath = path.join(root, "data/.gitignore")
+	const ignoreUri = pathToFileURL(ignorePath).href
+	for (const [contents, type, excluded] of [
+		["test.json\n", 1, true],
+		["test.json\n!test.json\n", 2, false],
+		["test.json\n", 2, true],
+		[null, 3, false],
+	] as const) {
+		if (contents === null) await rm(ignorePath)
+		else await put(root, "data/.gitignore", contents)
+		const after = client.notifications.length
+		await client.connection.sendNotification(
+			"workspace/didChangeWatchedFiles",
+			{ changes: [{ uri: ignoreUri, type }] },
+		)
+		const diagnostics = (await client.wait(uri, 1, after)).diagnostics
+		if (excluded) {
+			expect(diagnostics).toEqual([])
+			expect(
+				await client.request("textDocument/completion", uri, {
+					line: 0,
+					character: 2,
+				}),
+			).toEqual({ isIncomplete: false, items: [] })
+			expect(
+				await client.request("textDocument/hover", uri, {
+					line: 0,
+					character: 3,
+				}),
+			).toBeNull()
+		} else expect(diagnostics[0]?.code).toBe("schema/type")
+	}
+})
 
 test("stdio LSP and CLI agree on document diagnostics; editor supplies hints", async () => {
 	const { root, uri, engine, file } = await setup()

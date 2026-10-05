@@ -83,6 +83,7 @@ export async function checkProject(
 		for (const file of [...new Set(files)].sort()) {
 			try {
 				const included = isIncluded(project, file)
+				if (!options.files?.length && !included) continue
 				const text = included ? await readFile(file, "utf8") : ""
 				if (included) options.onRead?.(file, text)
 				report.files.push(await engine.validate(file, text))
