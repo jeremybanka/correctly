@@ -16,7 +16,7 @@ enumset = "1"
 indexmap1 = { package = "indexmap", version = "1" }
 indexmap2 = { package = "indexmap", version = "2" }
 rust_decimal = "1"
-schemars = { version = "=0.8.22", features = [
+schemars = { version = "=0.9.0", features = [
 	"chrono",
 	"uuid08",
 	"uuid1",
