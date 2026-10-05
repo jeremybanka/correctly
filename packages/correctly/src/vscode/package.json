@@ -32,10 +32,17 @@
 	},
 	"activationEvents": [
 		"onLanguage:json",
-		"onLanguage:jsonc"
+		"onLanguage:jsonc",
+		"workspaceContains:**/correctly.config.ts"
 	],
 	"engines": {
-		"vscode": "^1.100.0"
+		"vscode": "^1.105.0"
+	},
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Correctly evaluates the project TypeScript configuration and its imported parser, validator, and extension code."
+		}
 	},
 	"extensionKind": [
 		"workspace"

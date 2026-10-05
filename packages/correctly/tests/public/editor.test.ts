@@ -5,7 +5,22 @@ import { expect, test } from "vite-plus/test"
 import { Hints } from "../../src/lsp/hints.ts"
 import { Workspace } from "../../src/lsp/workspace.ts"
 import { Engine } from "../../src/core/engine.ts"
-import { setup, put, sampleSchema, temp } from "./helpers.ts"
+import {
+	setup,
+	put,
+	sampleSchema,
+	temp,
+	configSource,
+	onCleanup,
+} from "./helpers.ts"
+
+function workspaceFor(roots: string[]) {
+	const workspace = new Workspace(roots)
+	onCleanup(async () => {
+		workspace.invalidate()
+	})
+	return workspace
+}
 
 test("external associations provide property/value completions and hover without embedded $schema", async () => {
 	const { engine, uri } = await setup()
@@ -86,16 +101,16 @@ test("unsaved documents use the same diagnostics as the CLI core", async () => {
 		2,
 		'{"name":2,"extra":true}',
 	)
-	const workspace = new Workspace([root])
+	const workspace = workspaceFor([root])
 	workspace.open(document)
 	expect((await workspace.validate(document)).diagnostics).toEqual(
 		(await engine.validate(file, document.getText())).diagnostics,
 	)
 })
 
-test("unsaved schema and config edits refresh validation and hints; closing restores disk", async () => {
+test("unsaved schemas refresh validation and hints; executable configs only change on save", async () => {
 	const { root, uri } = await setup()
-	const workspace = new Workspace([root])
+	const workspace = workspaceFor([root])
 	const document = TextDocument.create(uri, "json", 1, '{"name":"x"}')
 	workspace.open(document)
 	expect((await workspace.validate(document)).diagnostics).toEqual([])
@@ -124,18 +139,26 @@ test("unsaved schema and config edits refresh validation and hints; closing rest
 	).toContain("A number now")
 	workspace.close(schemaUri)
 	expect((await workspace.validate(document)).diagnostics).toEqual([])
-	const configUri = pathToFileURL(path.join(root, "correctly.config.json")).href
+	const configUri = pathToFileURL(path.join(root, "correctly.config.ts")).href
 	workspace.open(
-		TextDocument.create(configUri, "json", 2, '{"associations":[]}'),
+		TextDocument.create(
+			configUri,
+			"typescript",
+			2,
+			configSource({ associations: [] }),
+		),
 	)
+	expect((await workspace.validate(document)).coverage).toBe("schema")
+	await put(root, "correctly.config.ts", { associations: [] })
+	workspace.invalidate()
 	expect((await workspace.validate(document)).coverage).toBe("syntax-only")
 	workspace.close(configUri)
-	expect((await workspace.validate(document)).coverage).toBe("schema")
+	expect((await workspace.validate(document)).coverage).toBe("syntax-only")
 })
 
 test("schema changes on disk take effect after invalidation", async () => {
 	const { root, uri } = await setup()
-	const workspace = new Workspace([root])
+	const workspace = workspaceFor([root])
 	const document = TextDocument.create(uri, "json", 1, '{"name":"x"}')
 	expect((await workspace.validate(document)).diagnostics).toEqual([])
 	await put(root, "schema.json", { type: "number" })
@@ -148,7 +171,7 @@ test("schema changes on disk take effect after invalidation", async () => {
 test("multi-root workspaces and nested configs keep their own schemas", async () => {
 	const first = await setup()
 	const second = await setup({ type: "number" })
-	const workspace = new Workspace([first.root, second.root])
+	const workspace = workspaceFor([first.root, second.root])
 	const document = (uri: string) =>
 		TextDocument.create(uri, "json", 1, '{"name":"x"}')
 	expect((await workspace.validate(document(first.uri))).diagnostics).toEqual(
@@ -157,7 +180,7 @@ test("multi-root workspaces and nested configs keep their own schemas", async ()
 	expect(
 		(await workspace.validate(document(second.uri))).diagnostics[0]?.code,
 	).toBe("schema/type")
-	await put(first.root, "nested/correctly.config.json", {
+	await put(first.root, "nested/correctly.config.ts", {
 		associations: [{ files: ["**/*.json"], schema: "../schema.json" }],
 	})
 	const nested = pathToFileURL(path.join(first.root, "nested/data.json")).href
@@ -172,21 +195,24 @@ test("multi-root workspaces and nested configs keep their own schemas", async ()
 	).toBe("config")
 })
 
-test("missing configs and invalid unsaved configs fail visibly", async () => {
+test("missing configs and invalid saved configs fail visibly", async () => {
 	const root = await temp()
 	const uri = pathToFileURL(path.join(root, "data.json")).href
 	const document = TextDocument.create(uri, "json", 1, "{}")
-	const workspace = new Workspace([root])
+	const workspace = workspaceFor([root])
 	expect((await workspace.validate(document)).failures[0]?.code).toBe("config")
-	await put(root, "correctly.config.json", { associations: [] })
+	await put(root, "correctly.config.ts", { associations: [] })
 	workspace.open(
 		TextDocument.create(
-			pathToFileURL(path.join(root, "correctly.config.json")).href,
+			pathToFileURL(path.join(root, "correctly.config.ts")).href,
 			"json",
 			1,
 			"{",
 		),
 	)
+	expect((await workspace.validate(document)).failures).toEqual([])
+	await put(root, "correctly.config.ts", "{")
+	workspace.invalidate()
 	expect((await workspace.validate(document)).failures[0]?.code).toBe("config")
 })
 
@@ -210,12 +236,12 @@ test("explicit syntax-only associations provide no external hints", async () => 
 	).toEqual([])
 })
 
-test("new unsaved configs participate in editor discovery", async () => {
+test("new executable configs are discovered only after saving", async () => {
 	const root = await temp()
-	const workspace = new Workspace([root])
+	const workspace = workspaceFor([root])
 	workspace.open(
 		TextDocument.create(
-			pathToFileURL(path.join(root, "correctly.config.json")).href,
+			pathToFileURL(path.join(root, "correctly.config.ts")).href,
 			"json",
 			1,
 			'{"associations":[]}',
@@ -227,6 +253,9 @@ test("new unsaved configs participate in editor discovery", async () => {
 		1,
 		"{}",
 	)
+	expect((await workspace.validate(document)).failures[0]?.code).toBe("config")
+	await put(root, "correctly.config.ts", { associations: [] })
+	workspace.invalidate()
 	expect(await workspace.validate(document)).toMatchObject({
 		diagnostics: [],
 		failures: [],

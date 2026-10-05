@@ -15,6 +15,7 @@ export async function buildVsix(
 	for (const [entry, outfile] of [
 		["vscode/extension", "extension"],
 		["lsp/server", "server"],
+		["runtime/worker", "worker"],
 	]) {
 		const bundle = await rolldown({
 			input: path.join(packageRoot, `src/${entry}.ts`),

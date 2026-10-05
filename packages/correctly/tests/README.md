@@ -5,3 +5,5 @@
 `private/` checks distribution mechanics: the built CLI and an isolated bundled VSIX server without installed npm dependencies. These tests run when build artifacts exist. CI explicitly builds both distributions, then runs `test:distribution`.
 
 The test suite starts local HTTP servers to exercise real remote-loading behavior. It needs loopback network access; it does not fetch external schemas or depend on sibling repositories at test time. Fixture origins are recorded in `public/fixtures/repositories/README.md`.
+
+Schemars format behavior, pinned Rust fixtures, and the compatibility release gate live in `packages/schemars/tests`. Core retains cross-extension, CLI, and editor integration coverage. Run `pnpm test:schemars` to reproduce every historical contract and review the Renovate probe.

@@ -22,6 +22,50 @@ export async function temp(): Promise<string> {
 	temporary.push(root)
 	return root
 }
+export type TestConfig = {
+	files?: string[]
+	exclude?: string[]
+	associations: {
+		name?: string
+		files: string[]
+		schema: string | null
+		mode?: "json" | "jsonc"
+		extensions?: string[]
+	}[]
+	remote?: ProjectConfig["remote"]
+}
+export function configSource(config: TestConfig, built = false): string {
+	const source = new URL("../../src/", import.meta.url)
+	const core = new URL(
+		built ? "../../dist/core.mjs" : "core/index.ts",
+		built ? import.meta.url : source,
+	).href
+	const adapter = new URL(
+		built ? "../../dist/ajv.mjs" : "validators/ajv.ts",
+		built ? import.meta.url : source,
+	).href
+	const extension = new URL(
+		built ? "../../../schemars/dist/ajv.mjs" : "../../../schemars/src/ajv.ts",
+		import.meta.url,
+	).href
+	const renovate = new URL(
+		built ? "../../dist/renovate.mjs" : "extensions/renovate.ts",
+		built ? import.meta.url : source,
+	).href
+	const rules = config.associations.map(
+		({ schema, mode, extensions, ...rule }) => `{
+  ...${JSON.stringify(rule)},
+  ${mode ? `parse: ${mode}(),` : ""}
+  validate: ${schema === null ? "null" : `ajv({ schema: ${JSON.stringify(schema)}, extensions: [${(extensions ?? []).map((id) => (id.startsWith("schemars@") ? `schemars({ version: ${JSON.stringify(id.slice("schemars@".length))} })` : id === "renovate" ? "renovate()" : JSON.stringify(id))).join(",")}] })`},
+ }`,
+	)
+	const { associations: _rules, ...rest } = config
+	return `import { defineConfig, json, jsonc } from ${JSON.stringify(core)}
+import { ajv } from ${JSON.stringify(adapter)}
+${config.associations.some((rule) => rule.extensions?.some((id) => id.startsWith("schemars@"))) ? `import { schemars } from ${JSON.stringify(extension)}` : ""}
+import { renovate } from ${JSON.stringify(renovate)}
+export default defineConfig({ ...${JSON.stringify(rest)}, associations: [${rules.join(",\n")}] })`
+}
 export async function put(
 	root: string,
 	file: string,
@@ -31,7 +75,11 @@ export async function put(
 	await mkdir(path.dirname(destination), { recursive: true })
 	await writeFile(
 		destination,
-		typeof value === "string" ? value : JSON.stringify(value, null, 2),
+		typeof value === "string"
+			? value
+			: file.endsWith("correctly.config.ts")
+				? configSource(value as TestConfig)
+				: JSON.stringify(value, null, 2),
 	)
 	return destination
 }
@@ -51,12 +99,12 @@ export const sampleSchema = {
 }
 export async function setup(
 	schema: unknown = sampleSchema,
-	config?: ProjectConfig,
+	config?: TestConfig,
 ) {
 	const root = await temp()
 	const configPath = await put(
 		root,
-		"correctly.config.json",
+		"correctly.config.ts",
 		config ?? {
 			files: ["data/**/*.json", "data/**/*.jsonc"],
 			associations: [

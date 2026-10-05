@@ -117,6 +117,19 @@ function excerpt(
 	return { lines: output, width }
 }
 
+function renderFailure(
+	error: Failure,
+	styler: Styler,
+	prefix = "",
+	continuation = "",
+): string {
+	const [title, ...details] = error.message.split("\n")
+	return [
+		`${prefix}${styler.bad(error.code)}: ${title}`,
+		...details.map((line) => `${styler.dim(continuation + "│")} ${line}`),
+	].join("\n")
+}
+
 type FileGroup = { file: string; result?: FileResult; failures: Failure[] }
 
 function renderDiagnostic(
@@ -201,7 +214,9 @@ function fileSection(
 				? format
 				: schema
 					? `${format} against ${association.name} (${displaySchema(cwd, schema)})`
-					: `${format} syntax only (${association ? `association: ${association.name}` : "no schema association"})`
+					: association?.validator
+						? `${format} validated by ${association.validator}`
+						: `${format} syntax only (${association ? `association: ${association.name}` : "no schema association"})`
 		header += `  ${styler.dim(`·  ${description}`)}`
 	}
 	const output = [header]
@@ -230,7 +245,12 @@ function fileSection(
 			)
 		} else
 			output.push(
-				`${styler.dim(branch)} ${styler.bad(issue.code)}: ${issue.message}`,
+				renderFailure(
+					issue,
+					styler,
+					`${styler.dim(branch)} `,
+					last ? "   " : "│  ",
+				),
 			)
 		if (!last) output.push(styler.dim("│"))
 	}
@@ -265,8 +285,7 @@ export function readableReport(
 	const output = [...groups.values()]
 		.toSorted((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0))
 		.map((group) => fileSection(group, options, styler))
-	for (const error of globalFailures)
-		output.push(`${styler.bad(error.code)}: ${error.message}`)
+	for (const error of globalFailures) output.push(renderFailure(error, styler))
 	const errors = report.files.reduce(
 		(count, file) => count + diagnosticViews(file.diagnostics).length,
 		0,
@@ -288,7 +307,7 @@ export function readableReport(
 					? styler.warning
 					: styler.success)(status),
 			"",
-			`${s.checked} checked, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
+			`${s.checked} checked, ${s.validated} validated, ${s.schemaCovered} schema-covered, ${s.syntaxOnly} syntax-only, ${s.invalid} invalid, ${s.failures} failures`,
 		].join("\n"),
 	)
 	return output.join("\n\n")

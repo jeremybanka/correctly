@@ -3,6 +3,7 @@ import { LanguageClient, TransportKind } from "vscode-languageclient/node"
 
 let client: LanguageClient | undefined
 export async function activate(context: vscode.ExtensionContext) {
+	if (!vscode.workspace.isTrusted) return
 	const watcher = vscode.workspace.createFileSystemWatcher("**/*")
 	context.subscriptions.push(watcher)
 	client = new LanguageClient(
@@ -13,10 +14,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			transport: TransportKind.stdio,
 		},
 		{
-			documentSelector: [
-				{ scheme: "file", language: "json" },
-				{ scheme: "file", language: "jsonc" },
-			],
+			documentSelector: [{ scheme: "file" }],
 			synchronize: { fileEvents: watcher },
 		},
 	)

@@ -6,6 +6,7 @@ import type { AnySchema, SchemaObject } from "ajv"
 import { parseDocument } from "./parse.ts"
 import { readText, type Project, type ReadText } from "./config.ts"
 import { CorrectlyError } from "./types.ts"
+import { schemaChildren } from "./schema-walk.ts"
 
 export type Dialect = "draft7" | "2020-12"
 export const DIALECTS = {
@@ -23,28 +24,6 @@ const VOCABULARIES = new Set(
 		"content",
 	].map((name) => `https://json-schema.org/draft/2020-12/vocab/${name}`),
 )
-const SINGLE_SCHEMAS = [
-	"additionalItems",
-	"additionalProperties",
-	"contains",
-	"propertyNames",
-	"not",
-	"if",
-	"then",
-	"else",
-	"unevaluatedProperties",
-	"unevaluatedItems",
-	"contentSchema",
-]
-const MAP_SCHEMAS = [
-	"properties",
-	"patternProperties",
-	"definitions",
-	"$defs",
-	"dependentSchemas",
-	"dependencies",
-]
-const ARRAY_SCHEMAS = ["allOf", "anyOf", "oneOf", "prefixItems"]
 
 function isObject(value: unknown): value is SchemaObject {
 	return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -70,6 +49,7 @@ export type SchemaResource = {
 	uri: string
 	schema: AnySchema
 	dialect: Dialect
+	pointer?: string
 }
 type CacheEntry = {
 	uri: string
@@ -96,7 +76,12 @@ export class SchemaStore {
 	private readonly read: ReadText
 	private readonly request: typeof fetch
 	private requests = 0
-	constructor(project: Project, options: StoreOptions = {}) {
+	constructor(
+		project: Pick<Project, "root"> & {
+			config: Pick<Project["config"], "remote">
+		},
+		options: StoreOptions = {},
+	) {
 		this.options = options
 		const remote = project.config.remote
 		this.cacheDir = path.resolve(
@@ -200,6 +185,7 @@ export class SchemaStore {
 		base: string,
 		expected: Dialect,
 		root: SchemaResource,
+		location = "",
 	) {
 		if (!isObject(schema)) return
 		const ownDialect = dialect(schema.$schema, expected)
@@ -239,28 +225,22 @@ export class SchemaStore {
 				throw new CorrectlyError("schema", `$id must be a string: ${base}`)
 			scope = new URL(schema.$id, base).href
 			schema.$id = scope
-			this.register(scope.replace(/#$/, ""), { ...root, schema })
+			this.register(scope.replace(/#$/, ""), {
+				...root,
+				schema,
+				pointer: location,
+			})
 		}
 		for (const anchor of [schema.$anchor, schema.$dynamicAnchor]) {
 			if (typeof anchor === "string")
-				this.register(new URL(`#${anchor}`, scope).href, { ...root, schema })
+				this.register(new URL(`#${anchor}`, scope).href, {
+					...root,
+					schema,
+					pointer: location,
+				})
 		}
-		for (const key of SINGLE_SCHEMAS)
-			this.normalize(schema[key], scope, expected, root)
-		for (const key of MAP_SCHEMAS) {
-			if (isObject(schema[key]))
-				for (const child of Object.values(
-					schema[key] as Record<string, unknown>,
-				))
-					this.normalize(child, scope, expected, root)
-		}
-		for (const key of [...ARRAY_SCHEMAS, "items"]) {
-			const children: unknown = schema[key]
-			if (Array.isArray(children))
-				for (const child of children)
-					this.normalize(child, scope, expected, root)
-			else if (key === "items") this.normalize(children, scope, expected, root)
-		}
+		for (const [path, child] of schemaChildren(schema))
+			this.normalize(child, scope, expected, root, location + path)
 	}
 
 	private async remote(uri: string): Promise<string> {

@@ -14,7 +14,14 @@
 			"types": "./dist/core.d.mts",
 			"import": "./dist/core.mjs"
 		},
-		"./config.schema.json": "./src/core/config.schema.json"
+		"./validators/ajv": {
+			"types": "./dist/ajv.d.mts",
+			"import": "./dist/ajv.mjs"
+		},
+		"./extensions/renovate": {
+			"types": "./dist/renovate.d.mts",
+			"import": "./dist/renovate.mjs"
+		}
 	},
 	"bin": {
 		"correctly": "./dist/cli.mjs",
@@ -35,11 +42,13 @@
 		"test": "vp test",
 		"test:public": "vp test tests/public",
 		"test:private": "vp test tests/private",
-		"test:watch": "vp test watch"
+		"test:watch": "vp test watch",
+		"test:distribution": "vp test tests/private/distribution.test.ts"
 	},
 	"dependencies": {
 		"ajv": "8.20.0",
 		"ajv-formats": "3.0.1",
+		"comline": "0.9.0",
 		"jsonc-parser": "3.3.1",
 		"picomatch": "4.0.7",
 		"tinyglobby": "0.2.17",

@@ -1,48 +1,36 @@
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { TextDocument } from "vscode-languageserver-textdocument"
-import {
-	contains,
-	discoverConfig,
-	loadProject,
-	readText,
-	type ReadText,
-} from "../core/config.ts"
-import { Engine } from "../core/engine.ts"
+import { contains, discoverConfig, CONFIG_NAME } from "../core/config.ts"
+import { ProjectSession } from "../runtime/session.ts"
 import { CorrectlyError, failure, type FileResult } from "../core/types.ts"
 import { diagnostic } from "../core/parse.ts"
 
 export class Workspace {
 	onSchema: ((uri: string) => void) | undefined
 	roots: string[]
-	private readonly read: ReadText
 	readonly documents = new Map<string, TextDocument>()
-	private readonly engines = new Map<string, Promise<Engine>>()
-	private controller = new AbortController()
+	private readonly engines = new Map<string, ProjectSession>()
 	generation = 0
-	constructor(roots: string[], read: ReadText = readText) {
+	constructor(roots: string[]) {
 		this.roots = roots
-		this.read = read
 	}
 
 	invalidate() {
 		this.generation++
-		this.controller.abort()
-		this.controller = new AbortController()
+		for (const session of this.engines.values()) void session.dispose()
 		this.engines.clear()
 	}
 
 	open(document: TextDocument): boolean {
 		this.documents.set(document.uri, document)
 		const resource =
-			path.basename(fileURLToPath(document.uri)) === "correctly.config.json" ||
-			this.isSchema(document.uri)
+			this.isSchema(document.uri) && !this.moduleUris.has(document.uri)
 		if (resource) this.invalidate()
 		return resource
 	}
 	close(uri: string): boolean {
-		const resource =
-			uri.endsWith("/correctly.config.json") || this.isSchema(uri)
+		const resource = this.isSchema(uri) && !this.moduleUris.has(uri)
 		this.documents.delete(uri)
 		if (resource) this.invalidate()
 		return resource
@@ -51,15 +39,19 @@ export class Workspace {
 	private isSchema(uri: string): boolean {
 		return this.schemaUris.has(uri)
 	}
+	private readonly moduleUris = new Set<string>()
 	resourceChanged(uri: string): boolean {
-		return uri.endsWith("/correctly.config.json") || this.isSchema(uri)
-	}
-	private readonly readBuffer: ReadText = (uri) => {
-		const document = this.documents.get(uri)
-		return document ? Promise.resolve(document.getText()) : this.read(uri)
+		return (
+			uri.endsWith(`/${CONFIG_NAME}`) ||
+			this.isSchema(uri) ||
+			this.moduleUris.has(uri) ||
+			/\/(?:package\.json|pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/.test(
+				uri,
+			)
+		)
 	}
 
-	async engineFor(uri: string): Promise<Engine> {
+	async engineFor(uri: string): Promise<ProjectSession> {
 		const file = fileURLToPath(uri)
 		const root = this.roots
 			.filter((r) => contains(r, file))
@@ -69,36 +61,25 @@ export class Workspace {
 				"config",
 				`Document is outside the editor workspace: ${file}`,
 			)
-		const virtualConfigs = new Set(
-			[...this.documents.keys()]
-				.filter((key) => key.endsWith("/correctly.config.json"))
-				.map((key) => fileURLToPath(key)),
-		)
-		const configPath = await discoverConfig(
-			path.dirname(file),
-			root,
-			virtualConfigs,
-		)
-		let promise = this.engines.get(configPath)
-		if (!promise) {
-			const signal = this.controller.signal
-			promise = (async () => {
-				const project = await loadProject(configPath, this.readBuffer)
-				const readSchema: ReadText = async (schema) => {
-					this.schemaUris.add(schema)
-					this.onSchema?.(schema)
-					return this.readBuffer(schema)
-				}
-				const engine = new Engine(project, { read: readSchema, signal })
-				await engine.prepare()
-				for (const resource of engine.store.resources.values())
-					this.schemaUris.add(resource.uri)
-				signal.throwIfAborted()
-				return engine
-			})()
-			this.engines.set(configPath, promise)
+		const configPath = await discoverConfig(path.dirname(file), root)
+		let session = this.engines.get(configPath)
+		if (!session) {
+			session = new ProjectSession(configPath, {
+				buffers: [...this.documents].map(([uri, document]) => [
+					uri,
+					document.getText(),
+				]),
+				onDependency: (dependency, kind) => {
+					;(kind === "module" ? this.moduleUris : this.schemaUris).add(
+						dependency,
+					)
+					this.onSchema?.(dependency)
+				},
+			})
+			this.engines.set(configPath, session)
 		}
-		return promise
+		await session.ready
+		return session
 	}
 
 	async validate(document: TextDocument): Promise<FileResult> {
@@ -110,6 +91,20 @@ export class Workspace {
 			)
 		} catch (error) {
 			const problem = failure(error, fileURLToPath(document.uri))
+			if (
+				problem.code === "config" &&
+				problem.message.startsWith(`No ${CONFIG_NAME} found`) &&
+				!["json", "jsonc"].includes(document.languageId)
+			)
+				return {
+					file: fileURLToPath(document.uri),
+					mode: document.languageId,
+					association: null,
+					coverage: "excluded",
+					diagnostics: [],
+					failures: [],
+				}
+
 			return {
 				file: fileURLToPath(document.uri),
 				mode: document.languageId === "jsonc" ? "jsonc" : "json",
