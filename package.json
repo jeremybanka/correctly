@@ -21,7 +21,8 @@
 		"test:distribution": "vp run -r test:distribution",
 		"test:schemars": "node scripts/check-schemars.ts",
 		"test:public": "pnpm -r test:public",
-		"test:breakage": "pnpm -r test:breakage"
+		"test:breakage": "pnpm -r test:breakage",
+		"build:pkl": "node scripts/build-pkl.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

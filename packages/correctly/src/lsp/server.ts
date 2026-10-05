@@ -67,13 +67,14 @@ export function startServer() {
 			return
 		watchedSchemas.add(uri)
 		const file = fileURLToPath(uri)
+		const pattern = new URL(uri).searchParams.get("correctly-glob")
 		void connection.client
 			.register(DidChangeWatchedFilesNotification.type, {
 				watchers: [
 					{
 						globPattern: {
-							baseUri: pathToFileURL(path.dirname(file)).href,
-							pattern: path.basename(file),
+							baseUri: pathToFileURL(pattern ? file : path.dirname(file)).href,
+							pattern: pattern ?? path.basename(file),
 						},
 					},
 				],

@@ -44,9 +44,9 @@ Rename `correctly.config.json` to `correctly.config.ts`, export a `defineConfig`
 
 Editors choose the longest workspace root containing a file, then search upward from the file's directory, stopping at that root. Nested configurations override parent configurations completely. Sibling roots remain independent. Missing configurations become editor diagnostics. Executable configuration and imported modules must be saved before discovery or reload. Unsaved edits to those files never execute. Unsaved data and JSON Schema buffers still affect validation.
 
-File patterns, exclusions, local schema paths, and cache paths resolve from the configuration directory. Patterns use forward slashes, can match dotfiles, and must be relative without `..` or leading `!`. Use `exclude` instead of negated patterns. `files` defaults to `**/*.json`, `**/*.jsonc`, `**/*.yaml`, `**/*.yml`, and `**/*.toml`. Built-in exclusions cover `node_modules`, `.git`, `dist`, `artifacts`, and `.correctly-cache`; configured cache directories inside the project are also excluded. User exclusions add to these defaults. Excluded files are skipped.
+File patterns, exclusions, local schema paths, and cache paths resolve from the configuration directory. Patterns use forward slashes, can match dotfiles, and must be relative without `..` or leading `!`. Use `exclude` instead of negated patterns. `files` defaults to `**/*.json`, `**/*.jsonc`, `**/*.yaml`, `**/*.yml`, `**/*.toml`, and `**/*.pkl`. Built-in exclusions cover `node_modules`, `.git`, `dist`, `artifacts`, and `.correctly-cache`; configured cache directories inside the project are also excluded. User exclusions add to these defaults. Excluded files are skipped.
 
-Associations are ordered: the **last matching rule wins**. `parse` selects a parser implementation; omitting it selects JSONC for `.jsonc`, YAML for `.yaml`/`.yml`, TOML for `.toml`, and strict JSON otherwise. Extension detection is case-insensitive; file patterns retain their usual case-sensitive matching. `validate: null` explicitly requests syntax-only coverage. Unassociated included documents are also syntax-checked and reported as `syntax-only`; missing coverage does not fail the command. Reports include the matched index, name, optional schema URI, parser ID (`mode`), validator ID, extension IDs and coverage. Association patterns do not expand the project's `files` list: include custom file extensions there as well.
+Associations are ordered: the **last matching rule wins**. `parse` selects a parser implementation; omitting it selects JSONC for `.jsonc`, YAML for `.yaml`/`.yml`, TOML for `.toml`, PKL for `.pkl`, and strict JSON otherwise. Extension detection is case-insensitive; file patterns retain their usual case-sensitive matching. `validate: null` explicitly requests syntax-only coverage. Unassociated included documents are also syntax-checked and reported as `syntax-only`; missing coverage does not fail the command. Reports include the matched index, name, optional schema URI, parser ID (`mode`), validator ID, extension IDs and coverage. Association patterns do not expand the project's `files` list: include custom file extensions there as well.
 
 ### Gitignore exclusions
 
@@ -74,6 +74,51 @@ Document `$schema` is always ordinary data. It is neither removed nor used to se
 Ajv provides authoritative validation in both CLI and LSP. Separate instances support draft 7 and draft 2020-12, including prefixItems, unevaluatedProperties, and dynamic references. Root schemas without `$schema` default to draft 7; referenced resources without one inherit the referencing dialect. Unknown dialects, mixed-dialect graphs, unsupported required vocabularies, unresolved references, invalid schemas, and unknown validation keywords fail visibly. Standard 2020-12 core/applicator/unevaluated/validation/metadata/format-annotation/content vocabularies are recognized. Required format-assertion vocabulary and custom required vocabularies are not supported. ajv-formats applies its supported format checks in both drafts; unknown formats fail compilation. Content decoding/validation is not performed. `$async` is unsupported.
 
 Descriptive Microsoft schema extensions, such as `markdownDescription`, `enumDescriptions`, and `defaultSnippets`, are treated as annotations. No values are coerced, no defaults are inserted, and no properties are removed. Formatting is outside validation.
+
+## PKL
+
+PKL has its own native types and constraints. Combine the `pkl()` parser with the separate `pkl()` validator:
+
+```ts
+import { defineConfig, pkl as parsePkl } from "correctly"
+import { pkl } from "correctly/validators/pkl"
+import { ajv } from "correctly/validators/ajv"
+
+export default defineConfig({
+	files: ["config/**/*.pkl"],
+	associations: [
+		{
+			files: ["config/**/*.pkl"],
+			parse: parsePkl(),
+			validate: pkl({
+				environment: { APP_NAME: "example" },
+				properties: { stage: "development" },
+				// Optional additional checks on the evaluated JSON output:
+				validate: ajv({ schema: "schemas/application.json" }),
+			}),
+		},
+	],
+})
+```
+
+```pkl
+// config/application.pkl
+name: String = read("env:APP_NAME")
+port: Int(this > 0 && this < 65536) = 8080
+stage: String = read("prop:stage")
+```
+
+`validate: pkl()` is sufficient for native Pkl validation. The optional nested validator accepts the `json` value model and receives the evaluated output, including exact serialized numeric lexemes. Ajv schemas, extension metadata, and coverage reporting compose normally. JavaScript values use its numeric representation; use an exact-number-aware validator when constraints depend on integer precision beyond JavaScript's safe range.
+
+`.pkl` selects the PKL parser by default. Use explicit `parse: parsePkl()` for broad or brace association patterns and for other extensions. The parser checks syntax and produces the `pkl` value model, represented as the source text; it does not evaluate expressions. `validate: null` and unassociated PKL files remain syntax-only. A direct Ajv association is incompatible; wrap Ajv with the PKL validator to validate evaluated JSON.
+
+The bundled WASM build of [pklr](https://github.com/jdx/pklr) provides types, constrained types, classes, type aliases, expressions, interpolation, functions, collections, local imports/import expressions, `amends`, `extends`, glob imports, and its standard library implementations. Relative module and resource paths resolve from the importing PKL file. Local imports and amendments use the editor's unsaved text buffers and register dependencies so changes refresh dependent diagnostics; missing imports fail visibly. Environment reads see only the supplied `environment` map, and `prop:` reads use `properties`; process environment variables are not exposed automatically.
+
+HTTP(S) modules and pklr-supported `package://` imports use Correctly's host fetch implementation. Relative remote imports resolve against the importing URL. ZIP packages are expanded in WASM memory. Remote timeout, byte, request and redirect limits apply; successful downloads are cached under `<cacheDir>/pkl`. `correctly check --offline` and `remote.offline` forbid network requests and require cached modules/packages. Local resources do not use the remote cache. Evaluation is bounded to 256 resource passes, 512 resources and 16 MiB of loaded resource data; an expanded package permits at most 4096 entries and 16 MiB. Resource and runtime failures use exit code 2; syntax, missing local imports, native type/constraint and evaluation errors use exit code 1.
+
+The CLI, core API, stdio LSP and bundled VSIX share this evaluator. Syntax byte offsets are converted to UTF-16 editor positions. pklr does not expose evaluation source maps: evaluation diagnostics point to the start of the module, and nested JSON Schema diagnostics retain their JSON pointers while using the module's source range. Imported syntax errors identify the source module in the message. PKL does not expose completion/hover through Correctly's JSON Schema editor service.
+
+Compatibility follows the pinned pklr implementation, not an assertion of complete compatibility with Apple's official Pkl runtime or toolchain. Unsupported upstream features fail visibly; project/package dependency resolution is limited to what pklr implements, and its package download conventions do not implement the official package resolver's full metadata/checksum protocol. The bundled build patches inherited module constraint checking. The exact upstream commit, patch, build recipe and license inventory are recorded in `compatibility/pklr/README.md` in the source repository. Consumers need neither Rust nor an external Pkl executable.
 
 ## YAML and TOML
 
