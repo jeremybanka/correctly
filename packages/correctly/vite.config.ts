@@ -26,6 +26,8 @@ export default defineConfig({
 		},
 	],
 	test: {
+		reporters: process.env.CI ? ["default", "json"] : ["default"],
+		outputFile: { json: "../../artifacts/test-results/core.json" },
 		include: ["tests/**/*.test.ts"],
 		exclude: ["tests/private/distribution.test.ts"],
 	},

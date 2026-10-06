@@ -25,15 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: mkdir -p artifacts/test-results
-      - run: pnpm test --reporter=default --reporter=json --outputFile=../../artifacts/test-results/core.json
-        working-directory: packages/correctly
+      - run: pnpm test
       - name: Upload test timings
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: core-test-results
-          path: artifacts/test-results/core.json
+          path: artifacts/test-results/*.json
           retention-days: 7
 
   Schemars:
@@ -59,17 +57,12 @@ jobs:
         env:
           SCHEMARS_BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: pnpm run test:schemars
-      - run: mkdir -p artifacts/test-results
-      - run: pnpm test --reporter=default --reporter=json --outputFile=../../artifacts/test-results/schemars.json
-        working-directory: packages/schemars
-      - name: Upload test and generator timings
+      - name: Upload generator timings
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: schemars-test-results
-          path: |
-            artifacts/test-results/schemars.json
-            artifacts/schemars/generation-timings.json
+          path: artifacts/schemars/generation-timings.json
           retention-days: 7
 
   Distribution:
@@ -81,11 +74,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run build
       - run: pnpm run build:vsix
-      - run: mkdir -p artifacts/test-results
-      - run: pnpm test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/core-distribution.json
-        working-directory: packages/correctly
-      - run: pnpm test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/schemars-distribution.json
-        working-directory: packages/schemars
+      - run: pnpm test:distribution
       - name: Upload distribution timings
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -113,9 +102,5 @@ jobs:
     steps:
       - name: Require every workload to pass
         env:
-          CORE_RESULT: ${{ needs.Core.result }}
-          SCHEMARS_RESULT: ${{ needs.Schemars.result }}
-          DISTRIBUTION_RESULT: ${{ needs.Distribution.result }}
-          BREAK_CHECK_RESULT: ${{ needs.BreakCheck.result }}
-        run: |
-          [[ "$CORE_RESULT" == "success" && "$SCHEMARS_RESULT" == "success" && "$DISTRIBUTION_RESULT" == "success" && "$BREAK_CHECK_RESULT" == "success" ]]
+          WORKLOAD_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: for workload_result in $WORKLOAD_RESULTS; do test "$workload_result" = success; done

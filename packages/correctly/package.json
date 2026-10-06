@@ -65,6 +65,7 @@
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.140.0",
 		"@vscode/vsce": "4.0.0",
+		"break-check": "0.8.1",
 		"rolldown": "1.2.12",
 		"vscode-languageclient": "10.1.2"
 	},

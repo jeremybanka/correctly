@@ -21,5 +21,3 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `release:version`   | Prepare versions and release metadata without publishing.                                                                                      |
 
 CI runs `check`, `test:schemars`, `test`, `test:breaks`, `build`, `build:vsix`, and `test:distribution`. Source tests and builds run independently. Distribution checks run after building the artifacts they inspect. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own `@correctlyjs/schemars` changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.
-
-The [test contracts](../packages/correctly/tests/README.md) describe break-check's restore boundary and certification. Commit changes before running `test:breaks`; it requires a clean checkout and access to `origin` and release tags.

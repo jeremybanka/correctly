@@ -193,9 +193,6 @@ importers:
       '@dprint/toml':
         specifier: 0.9.0
         version: 0.9.0
-      break-check:
-        specifier: 0.8.1
-        version: 0.8.1
       correctly:
         specifier: workspace:*
         version: link:packages/correctly
@@ -263,6 +260,9 @@ importers:
       '@vscode/vsce':
         specifier: 4.0.0
         version: 4.0.0
+      break-check:
+        specifier: 0.8.1
+        version: 0.8.1
       rolldown:
         specifier: 1.2.12
         version: 1.2.12
@@ -272,6 +272,9 @@ importers:
 
   packages/schemars:
     devDependencies:
+      break-check:
+        specifier: 0.8.1
+        version: 0.8.1
       correctly:
         specifier: workspace:*
         version: link:../correctly
