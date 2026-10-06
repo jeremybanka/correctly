@@ -1,0 +1,19 @@
+[package]
+name = "correctly-zed"
+version = "0.0.0"
+edition = "2024"
+license = "MPL-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "=0.7.0"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = "debuginfo"
+panic = "abort"

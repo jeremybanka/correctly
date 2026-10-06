@@ -39,6 +39,7 @@
 	"scripts": {
 		"build": "vp pack",
 		"build:vsix": "node src/cli/vsix.ts",
+		"build:zed": "node src/cli/zed.ts",
 		"test": "vp test",
 		"test:public": "vp test tests/public",
 		"test:private": "vp test tests/private",

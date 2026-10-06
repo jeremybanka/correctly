@@ -73,12 +73,14 @@ jobs:
   Distribution:
     name: Build and distribution
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: pnpm run build
       - run: pnpm run build:vsix
+      - run: rustup target add wasm32-wasip2
+      - run: pnpm run build:zed
       - run: mkdir -p artifacts/test-results
       - run: pnpm --filter correctly run test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/core-distribution.json
       - run: pnpm --filter @correctlyjs/schemars run test:distribution --reporter=default --reporter=json --outputFile=../../artifacts/test-results/schemars-distribution.json
@@ -88,6 +90,12 @@ jobs:
         with:
           name: distribution-test-results
           path: artifacts/test-results/*.json
+          retention-days: 7
+      - name: Upload sideloadable Zed extension
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: correctly-zed
+          path: artifacts/Correctly-*.zed.tar.gz
           retention-days: 7
 
   Test:
