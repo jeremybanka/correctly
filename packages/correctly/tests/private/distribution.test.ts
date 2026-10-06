@@ -43,6 +43,53 @@ describe("bundled distribution", () => {
 				"Run pnpm run build and pnpm run build:vsix before pnpm run test:distribution.",
 			)
 	})
+	test("published PKL adapters and isolated VSIX ship the WASM runtime", async () => {
+		const root = await temp()
+		await put(root, "node_modules/.keep", "")
+		await symlink(packageRoot, path.join(root, "node_modules/correctly"), "dir")
+		await put(
+			root,
+			"correctly.config.ts",
+			`import {defineConfig,pkl as parse} from "correctly"; import {pkl} from "correctly/validators/pkl"; export default defineConfig({ files:["data.pkl"],associations:[{files:["*.pkl"],parse:parse(),validate:pkl()}]})`,
+		)
+		await put(root, "base.pkl", "port: Int(this > 0) = 80")
+		await put(root, "data.pkl", 'amends "base.pkl"\nport = -1')
+		const run = spawnSync(
+			process.execPath,
+			[path.join(packageRoot, "dist/cli.mjs"), "check", "--format=json"],
+			{ cwd: root, encoding: "utf8" },
+		)
+		expect(run.status).toBe(1)
+		expect(JSON.parse(run.stdout)).toMatchObject({
+			summary: { validated: 1, failures: 0 },
+			files: [{ mode: "pkl", diagnostics: [{ code: "pkl/evaluation" }] }],
+		})
+		const isolated = await temp()
+		await cp(stage, path.join(isolated, "extension"), { recursive: true })
+		expect(
+			(
+				await readFile(path.join(isolated, "extension/dist/pklr.wasm"))
+			).subarray(0, 4),
+		).toEqual(Buffer.from([0, 97, 115, 109]))
+		expect(
+			await readFile(
+				path.join(isolated, "extension/dist/pklr.LICENSE"),
+				"utf8",
+			),
+		).toContain("pklr")
+		const client = await lspClient(
+			[root],
+			path.join(isolated, "extension/dist/server.mjs"),
+			isolated,
+		)
+		const uri = pathToFileURL(path.join(root, "data.pkl")).href
+		await client.open(uri, 'amends "base.pkl"\nport = -1', 1, "pkl")
+		expect((await client.wait(uri, 1)).diagnostics[0]?.code).toBe(
+			"pkl/evaluation",
+		)
+		await client.change(uri, 'amends "base.pkl"\nport = 80', 2)
+		expect((await client.wait(uri, 2)).diagnostics).toEqual([])
+	})
 	test("built CLI and isolated VSIX recognize GITIGNORE from the published config export", async () => {
 		const { root, uri } = await builtProject(undefined, {
 			exclude: [GITIGNORE],

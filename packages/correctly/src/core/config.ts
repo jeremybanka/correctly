@@ -17,6 +17,7 @@ export const DEFAULT_FILES = [
 	"**/*.yaml",
 	"**/*.yml",
 	"**/*.toml",
+	"**/*.pkl",
 ]
 export const DEFAULT_EXCLUDES = [
 	"**/node_modules/**",

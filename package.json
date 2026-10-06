@@ -18,7 +18,8 @@
 		"check:tests": "node scripts/check-test-workloads.ts",
 		"check:correctly": "node packages/correctly/src/cli/main.ts check",
 		"test:distribution": "vp run -r test:distribution",
-		"test:schemars": "node scripts/check-schemars.ts"
+		"test:schemars": "node scripts/check-schemars.ts",
+		"build:pkl": "node scripts/build-pkl.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

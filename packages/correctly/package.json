@@ -1,7 +1,7 @@
 {
 	"name": "correctly",
 	"version": "0.1.2",
-	"description": "Shared JSON Schema validation for CI and editors",
+	"description": "Shared configuration validation for CI and editors",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/jeremybanka/correctly.git",
@@ -21,6 +21,10 @@
 		"./extensions/renovate": {
 			"types": "./dist/renovate.d.mts",
 			"import": "./dist/renovate.mjs"
+		},
+		"./validators/pkl": {
+			"types": "./dist/pkl.d.mts",
+			"import": "./dist/pkl.mjs"
 		}
 	},
 	"bin": {
@@ -37,7 +41,7 @@
 		"examples"
 	],
 	"scripts": {
-		"build": "vp pack",
+		"build": "vp pack && node src/cli/copy-wasm.ts",
 		"build:vsix": "node src/cli/vsix.ts",
 		"test": "vp test",
 		"test:public": "vp test tests/public",

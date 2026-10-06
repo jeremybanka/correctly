@@ -1,6 +1,7 @@
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { TextDocument } from "vscode-languageserver-textdocument"
+import picomatch from "picomatch"
 import {
 	contains,
 	discoverConfig,
@@ -42,7 +43,19 @@ export class Workspace {
 	}
 	private readonly schemaUris = new Set<string>()
 	private isSchema(uri: string): boolean {
-		return this.schemaUris.has(uri)
+		if (this.schemaUris.has(uri)) return true
+		for (const resource of this.schemaUris) {
+			const url = new URL(resource)
+			const pattern = url.searchParams.get("correctly-glob")
+			if (pattern && uri.startsWith("file:")) {
+				const relative = path
+					.relative(fileURLToPath(url), fileURLToPath(uri))
+					.split(path.sep)
+					.join("/")
+				if (picomatch(pattern, { dot: true })(relative)) return true
+			}
+		}
+		return false
 	}
 	private readonly moduleUris = new Set<string>()
 	resourceChanged(uri: string): boolean {
@@ -100,7 +113,7 @@ export class Workspace {
 			if (
 				problem.code === "config" &&
 				problem.message.startsWith(`No ${CONFIG_NAME} found`) &&
-				!["json", "jsonc", "yaml", "toml"].includes(document.languageId)
+				!["json", "jsonc", "yaml", "toml", "pkl"].includes(document.languageId)
 			)
 				return {
 					file: fileURLToPath(document.uri),

@@ -1,0 +1,62 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index dfc7579..391c72e 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -1897,6 +1897,8 @@ impl Evaluator {
+                         )?;
+                         base_obj = (**m).clone();
+                     }
++                } else {
++                    return Err(Error::ImportNotFound(amends_uri.clone()));
+                 }
+             }
+         }
+@@ -2024,6 +2026,8 @@ impl Evaluator {
+                             _ => {}
+                         }
+                     }
++                } else {
++                    return Err(Error::ImportNotFound(extends_uri.clone()));
+                 }
+             } else if uri.starts_with("https://") || uri.starts_with("http://") {
+                 self.check_not_self(module, path, Path::new(uri), "extend")?;
+@@ -2507,6 +2511,23 @@ impl Evaluator {
+         // Check declarations only after this module's final scope is complete:
+         // constraints and aliases may refer to members declared later.
+         if !evaluated_as_base {
++            for prop in &late_inherited_properties {
++                if let Some(value) = scope.get(&prop.name) {
++                    // An override inherits the base declaration's type even
++                    // when the child doesn't repeat that annotation.
++                    let mut declaration = (**prop).clone();
++                    declaration.value = Some(Expr::Null);
++                    self.check_declared_property_type(&declaration, value, &scope, depth)?;
++                    if child_property_names.contains(prop.name.as_str())
++                        && (has_modifier(&prop.modifiers, Modifier::Const)
++                            || has_modifier(&prop.modifiers, Modifier::Fixed))
++                    {
++                        return Err(Error::Eval(format!(
++                            "cannot override immutable property '{}'", prop.name
++                        )));
++                    }
++                }
++            }
+             for entry in module.body.iter() {
+                 if let Entry::Property(prop) = entry
+                     && !has_modifier(&prop.modifiers, Modifier::Local)
+@@ -2577,7 +2598,14 @@ impl Evaluator {
+                 _ => None,
+             }))
+         {
+-            effective_late_properties.insert(prop.name.clone(), prop.clone());
++            let mut effective = (**prop).clone();
++            if effective.type_ann.is_none()
++                && let Some(inherited) = effective_late_properties.get(&prop.name)
++            {
++                let inherited: &Arc<Property> = inherited;
++                effective.type_ann = inherited.type_ann.clone();
++            }
++            effective_late_properties.insert(prop.name.clone(), Arc::new(effective));
+         }
+         self.module_scopes.insert(
+             path.to_path_buf(),

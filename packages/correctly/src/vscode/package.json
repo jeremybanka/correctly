@@ -3,7 +3,7 @@
 	"displayName": "Correctly",
 	"version": "0.0.0",
 	"private": true,
-	"description": "JSON Schema validation and editor hints from one external configuration",
+	"description": "JSON Schema and Pkl validation from one external configuration",
 	"categories": [
 		"Linters",
 		"Programming Languages"
@@ -23,6 +23,9 @@
 		"LICENSE"
 	],
 	"contributes": {
+		"languages": [
+			{ "id": "pkl", "aliases": ["Pkl", "pkl"], "extensions": [".pkl"] }
+		],
 		"commands": [
 			{
 				"command": "correctly.restartServer",
@@ -35,7 +38,8 @@
 		"onLanguage:jsonc",
 		"onLanguage:yaml",
 		"onLanguage:toml",
-		"workspaceContains:**/correctly.config.ts"
+		"workspaceContains:**/correctly.config.ts",
+		"onLanguage:pkl"
 	],
 	"engines": {
 		"vscode": "^1.105.0"

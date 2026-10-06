@@ -72,11 +72,26 @@ jobs:
 
   Distribution:
     name: Build and distribution
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+      - run: rustup target add wasm32-unknown-unknown --toolchain 1.99.0
+      - run: pnpm run build:pkl --check
+      - name: Upload WASM mismatch evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pkl-wasm-mismatch-${{ runner.arch }}
+          path: |
+            artifacts/pklr-target/**/correctly_pklr.wasm
+            packages/correctly/src/core/pklr.wasm
+          retention-days: 7
       - run: pnpm run build
       - run: pnpm run build:vsix
       - run: mkdir -p artifacts/test-results
@@ -86,7 +101,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: distribution-test-results
+          name: distribution-test-results-${{ runner.arch }}
           path: artifacts/test-results/*.json
           retention-days: 7
 

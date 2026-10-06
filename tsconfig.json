@@ -32,6 +32,9 @@
 			],
 			"@correctlyjs/schemars/ajv": [
 				"./packages/schemars/src/ajv.ts"
+			],
+			"correctly/validators/pkl": [
+				"./packages/correctly/src/validators/pkl.ts"
 			]
 		}
 	},

@@ -63,10 +63,16 @@ export class Engine {
 		await this.register()
 		for (const rule of this.project.config.associations) {
 			if (rule.validate) {
-				if (!rule.validate.accepts.includes(rule.parse?.valueModel ?? "json"))
+				const parsers = rule.parse
+					? [rule.parse]
+					: rule.files.map(defaultParser)
+				const incompatible = parsers.find(
+					(parser) => !rule.validate!.accepts.includes(parser.valueModel),
+				)
+				if (incompatible)
 					throw new CorrectlyError(
 						"adapter-incompatible",
-						`Parser ${rule.parse?.id ?? "json"} produces ${rule.parse?.valueModel ?? "json"}; validator ${rule.validate.id} accepts ${rule.validate.accepts.join(", ")}`,
+						`Parser ${incompatible.id} produces ${incompatible.valueModel}; validator ${rule.validate.id} accepts ${rule.validate.accepts.join(", ")}`,
 					)
 				await this.validator(rule.validate)
 			}
