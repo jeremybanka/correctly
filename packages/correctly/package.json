@@ -40,7 +40,8 @@
 		"build": "vp pack",
 		"build:vsix": "node src/cli/vsix.ts",
 		"test": "vp test",
-		"test:public": "pnpm --workspace-root exec vp run -r --no-cache build && pnpm exec tsc --project tests/public/tsconfig.consumer.json && vp test --config tests/public/vite.config.ts",
+		"test:public": "vp test tests/public",
+		"test:breaks": "break-check",
 		"test:private": "vp test tests/private",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"

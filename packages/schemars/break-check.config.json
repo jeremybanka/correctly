@@ -1,6 +1,7 @@
 {
 	"tagPattern": "refs/tags/@correctlyjs/schemars@",
 	"testPattern": "{packages/schemars/tests/public/**/*,packages/correctly/tests/public/helpers.ts}",
-	"testCommand": "pnpm --filter @correctlyjs/schemars test:public",
-	"certifyCommand": "false"
+	"testCommand": "pnpm -C packages/schemars test:public",
+	"certifyCommand": "grep -q -F '\"@correctlyjs/schemars\": minor' .changeset/*.md",
+	"baseDirname": "../.."
 }

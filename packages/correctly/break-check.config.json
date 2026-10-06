@@ -1,6 +1,7 @@
 {
 	"tagPattern": "refs/tags/correctly@",
 	"testPattern": "packages/correctly/tests/public/**/*",
-	"testCommand": "pnpm --filter correctly test:public",
-	"certifyCommand": "false"
+	"testCommand": "pnpm -C packages/correctly test:public",
+	"certifyCommand": "grep -q -F '\"correctly\": minor' .changeset/*.md",
+	"baseDirname": "../.."
 }
