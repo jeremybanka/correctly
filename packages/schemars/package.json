@@ -30,6 +30,7 @@
 	"scripts": {
 		"build": "vp pack",
 		"test": "vp test",
+		"test:public": "pnpm --workspace-root exec vp run -r --no-cache build && pnpm exec tsc --project tests/public/tsconfig.json && vp test --config tests/public/vite.config.ts",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},

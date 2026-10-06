@@ -90,9 +90,20 @@ jobs:
           path: artifacts/test-results/*.json
           retention-days: 7
 
+  BreakCheck:
+    name: Released public contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm run test:break-check
+
   Test:
     if: ${{ always() }}
-    needs: [Core, Schemars, Distribution]
+    needs: [Core, Schemars, Distribution, BreakCheck]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
@@ -101,5 +112,6 @@ jobs:
           CORE_RESULT: ${{ needs.Core.result }}
           SCHEMARS_RESULT: ${{ needs.Schemars.result }}
           DISTRIBUTION_RESULT: ${{ needs.Distribution.result }}
+          BREAK_CHECK_RESULT: ${{ needs.BreakCheck.result }}
         run: |
-          [[ "$CORE_RESULT" == "success" && "$SCHEMARS_RESULT" == "success" && "$DISTRIBUTION_RESULT" == "success" ]]
+          [[ "$CORE_RESULT" == "success" && "$SCHEMARS_RESULT" == "success" && "$DISTRIBUTION_RESULT" == "success" && "$BREAK_CHECK_RESULT" == "success" ]]

@@ -11,6 +11,8 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `check:correctly`   | Validate repository JSON/JSONC using Correctly's configuration.                                                                                |
 | `test`              | Run public and private tests once; distribution checks run when built artifacts exist.                                                         |
 | `test:watch`        | Run interactive test suites.                                                                                                                   |
+| `test:public`       | Rebuild packages, check public consumer types against built declarations, and run each package's public tests once without task caching.       |
+| `test:break-check`  | Run current public contracts, then replay each package's latest released contracts with break-check from a clean checkout.                     |
 | `build`             | Build ESM CLI, LSP, and typed shared-core entries.                                                                                             |
 | `build:vsix`        | Bundle the VS Code client/server and write a universal VSIX to `artifacts`.                                                                    |
 | `test:schemars`     | Reproduce all pinned Schemars releases and review the Renovate probe; set `SCHEMARS_BASE_REF=origin/main` locally to include PR policy checks. |
@@ -18,4 +20,6 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `change`            | Author release notes; bodies stay on one line.                                                                                                 |
 | `release:version`   | Prepare versions and release metadata without publishing.                                                                                      |
 
-CI runs `check`, `test:schemars`, `test`, `build`, `build:vsix`, and `test:distribution`. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own `@correctlyjs/schemars` changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.
+CI runs `check`, `test:schemars`, `test`, `test:break-check`, `build`, `build:vsix`, and `test:distribution`. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own `@correctlyjs/schemars` changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.
+
+The [test contracts](../packages/correctly/tests/README.md) describe break-check's restore boundary and how to interpret failures. Commit changes before running `test:break-check`; it requires a clean checkout and access to `origin` and release tags.

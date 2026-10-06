@@ -1,0 +1,6 @@
+{
+	"tagPattern": "^refs/tags/correctly@",
+	"testPattern": "packages/correctly/tests/public/**/*",
+	"testCommand": "pnpm --filter correctly test:public",
+	"certifyCommand": "false"
+}

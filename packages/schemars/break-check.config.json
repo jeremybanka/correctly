@@ -1,0 +1,6 @@
+{
+	"tagPattern": "^refs/tags/@correctlyjs/schemars@",
+	"testPattern": "{packages/schemars/tests/public/**/*,packages/correctly/tests/public/helpers.ts}",
+	"testCommand": "pnpm --filter @correctlyjs/schemars test:public",
+	"certifyCommand": "false"
+}
