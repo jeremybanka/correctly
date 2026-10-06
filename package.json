@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "vp run -r build",
-		"build:vsix": "pnpm --filter correctly build:vsix",
+		"build:vsix": "pnpm -r build:vsix",
 		"check": "pnpm run \"/^check:.*/\"",
 		"check:fmt": "dprint check",
 		"check:vp": "vp check --no-fmt",
@@ -18,7 +18,9 @@
 		"check:tests": "node scripts/check-test-workloads.ts",
 		"check:correctly": "node packages/correctly/src/cli/main.ts check",
 		"test:distribution": "vp run -r test:distribution",
-		"test:schemars": "node scripts/check-schemars.ts"
+		"test:schemars": "node scripts/check-schemars.ts",
+		"test:public": "pnpm -r test:public",
+		"test:breaks": "pnpm -r test:breaks"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

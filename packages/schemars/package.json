@@ -30,10 +30,13 @@
 	"scripts": {
 		"build": "vp pack",
 		"test": "vp test",
+		"test:public": "vp test tests/public",
+		"test:breaks": "break-check",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},
 	"devDependencies": {
+		"break-check": "0.8.1",
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {

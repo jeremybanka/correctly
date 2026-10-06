@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process"
-import { globSync } from "node:fs"
+import { globSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { schemarsEras } from "../packages/schemars/src/eras.ts"
@@ -40,38 +41,43 @@ export function verifyTestWorkloads(): void {
 		{ cwd: root, exclude: ["**/target/**"] },
 	).sort()
 	const assignments: Assignment[] = []
-	for (const pkg of ["correctly", "schemars"])
-		for (const distribution of [false, true]) {
-			// Ask Vitest itself, so includes/excludes cannot drift from this audit.
-			const output = execFileSync(
-				"pnpm",
-				[
-					"exec",
-					"vp",
-					"test",
-					"list",
-					"--filesOnly",
-					"--json",
-					...(distribution ? ["--config", "vite.distribution.config.ts"] : []),
-				],
-				{
-					cwd: path.join(root, "packages", pkg),
-					encoding: "utf8",
-					stdio: ["ignore", "pipe", "pipe"],
-				},
-			)
-			const files = (JSON.parse(output) as { file: string }[]).map(({ file }) =>
-				path.relative(root, file).split(path.sep).join("/"),
-			)
-			assignments.push({
-				workload: distribution
-					? "distribution"
-					: pkg === "correctly"
-						? "core"
-						: "schemars",
-				files,
-			})
-		}
+	const reports = mkdtempSync(path.join(tmpdir(), "correctly-test-workloads-"))
+	try {
+		for (const pkg of ["correctly", "schemars"])
+			for (const distribution of [false, true]) {
+				// Ask Vitest itself, so includes/excludes cannot drift from this audit.
+				const report = path.join(reports, `${pkg}-${distribution}.json`)
+				execFileSync(
+					"pnpm",
+					[
+						"exec",
+						"vp",
+						"test",
+						"list",
+						"--filesOnly",
+						"--json",
+						report,
+						...(distribution
+							? ["--config", "vite.distribution.config.ts"]
+							: []),
+					],
+					{
+						cwd: path.join(root, "packages", pkg),
+						encoding: "utf8",
+						stdio: ["ignore", "pipe", "pipe"],
+					},
+				)
+				const files = (
+					JSON.parse(readFileSync(report, "utf8")) as { file: string }[]
+				).map(({ file }) => path.relative(root, file).split(path.sep).join("/"))
+				assignments.push({
+					workload: distribution ? "distribution" : "core",
+					files,
+				})
+			}
+	} finally {
+		rmSync(reports, { recursive: true, force: true })
+	}
 	verifyOwnership(expected, assignments)
 	for (const era of schemarsEras.slice(1)) {
 		const file = `packages/schemars/tests/public/schemars-${era.since}.test.ts`
@@ -81,7 +87,7 @@ export function verifyTestWorkloads(): void {
 			)
 	}
 	console.log(
-		`Verified ${expected.length} test files across core, Schemars, and distribution workloads.`,
+		`Verified ${expected.length} test files across source and distribution workloads.`,
 	)
 }
 
