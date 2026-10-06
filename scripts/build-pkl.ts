@@ -45,10 +45,16 @@ command("patch", [
 	fileURLToPath(new URL("inherited-types.patch", crate)),
 ])
 const cargoHome = process.env.CARGO_HOME ?? path.join(os.homedir(), ".cargo")
+const wrapper = new URL("scripts/pkl-rustc.ts", root)
+const wrapperHash = createHash("sha256")
+	.update(await readFile(wrapper))
+	.digest("hex")
+	.slice(0, 16)
+const target = new URL(`artifacts/pklr-target/${wrapperHash}/`, root)
 const env = {
 	...process.env,
-	CARGO_TARGET_DIR: fileURLToPath(new URL("artifacts/pklr-target", root)),
-	RUSTC_WRAPPER: fileURLToPath(new URL("scripts/pkl-rustc.ts", root)),
+	CARGO_TARGET_DIR: fileURLToPath(target),
+	RUSTC_WRAPPER: fileURLToPath(wrapper),
 	RUSTFLAGS: `${process.env.RUSTFLAGS ?? ""} --remap-path-prefix=${fileURLToPath(root)}=/correctly/ --remap-path-prefix=${cargoHome}=/cargo`,
 }
 const result = spawnSync(
@@ -59,10 +65,7 @@ const result = spawnSync(
 if (result.error) throw result.error
 if (result.status !== 0) throw new Error("pklr WASM build failed")
 const bytes = await readFile(
-	new URL(
-		"artifacts/pklr-target/wasm32-unknown-unknown/release/correctly_pklr.wasm",
-		root,
-	),
+	new URL("wasm32-unknown-unknown/release/correctly_pklr.wasm", target),
 )
 const destination = new URL("packages/correctly/src/core/pklr.wasm", root)
 const metadata = spawnSync(
