@@ -7,7 +7,13 @@ export default defineConfig({
 			format: "esm",
 			outDir: "dist",
 			sourcemap: true,
-			deps: { neverBundle: true },
+			deps: {
+				// tsdown <0.23 compatibility: resolve external dependency subpaths.
+				// Remove to preserve subpath imports as written (the new default).
+				// https://tsdown.dev/options/dependencies#deps-resolvedepsubpath
+				resolveDepSubpath: true,
+				neverBundle: true,
+			},
 			dts: { entry: ["src/index.ts", "src/ajv.ts"], sourcemap: true },
 		},
 	],
