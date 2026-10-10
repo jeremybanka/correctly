@@ -4,5 +4,5 @@ _.path = ["{{config_root}}/node_modules/.bin"]
 [tools]
 ni = "30.6.0"
 node = "26.11.1"
-pnpm = "12.10.1"
+pnpm = "12.11.2"
 rust = "1.99.0"
