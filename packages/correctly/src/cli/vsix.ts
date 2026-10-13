@@ -3,7 +3,7 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { rolldown } from "rolldown"
+import { bundleEditor } from "./editor-bundle.ts"
 
 export async function buildVsix(
 	packageRoot: string,
@@ -12,29 +12,11 @@ export async function buildVsix(
 	const buildRoot = path.join(outdir, ".correctly-vsix")
 	await rm(buildRoot, { force: true, recursive: true })
 	await mkdir(path.join(buildRoot, "dist"), { recursive: true })
-	for (const [entry, outfile] of [
+	await bundleEditor(packageRoot, path.join(buildRoot, "dist"), [
 		["vscode/extension", "extension"],
 		["lsp/server", "server"],
 		["runtime/worker", "worker"],
-	]) {
-		const bundle = await rolldown({
-			input: path.join(packageRoot, `src/${entry}.ts`),
-			platform: "node",
-			resolve: { mainFields: ["module", "main"] },
-			external: ["vscode"],
-			onLog: (level, log, handler) =>
-				handler(log.code === "UNRESOLVED_IMPORT" ? "error" : level, log),
-		})
-		try {
-			await bundle.write({
-				file: path.join(buildRoot, `dist/${outfile}.mjs`),
-				format: "esm",
-				sourcemap: true,
-			})
-		} finally {
-			await bundle.close()
-		}
-	}
+	])
 	const pkg = JSON.parse(
 		await readFile(path.join(packageRoot, "package.json"), "utf8"),
 	) as { version: string }

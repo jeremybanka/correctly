@@ -2,6 +2,7 @@
 
 - Keep schema associations in `correctly.config.ts`; document `$schema` fields do not select schemas.
 - Run `correctly check` in CI and use the extension or `correctly-lsp --stdio` for editor assistance.
+- Zed: run `pnpm build:zed` and sideload the generated `artifacts/Correctly-<version>.zed` directory through **Install Dev Extension**. The artifact ships precompiled WASM and the bundled server; recipients need no Rust. Enable it only in trusted projects; see `docs/guide.md` for setup and Node runtime overrides.
 - JSON is strict. JSONC permits comments and trailing commas. Duplicate keys are always errors.
 - YAML uses one YAML 1.2 core document with string keys and bounded, noncyclic aliases. TOML uses 1.0; dates and times validate as strings. Both reject non-finite numbers and integers outside JavaScript's safe range.
 - Built-in parsers `json()`, `jsonc()`, `yaml()`, and `toml()` produce the `json` value model. Omitting `parse` selects by extension; JSON, JSONC, YAML, YML, and TOML are discovered by default. Schema completion and hover currently support JSON/JSONC only.
