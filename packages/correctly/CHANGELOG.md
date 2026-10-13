@@ -1,5 +1,11 @@
 # correctly
 
+## 0.1.4
+
+### Patch Changes
+
+- e78d6c0: Add a precompiled Zed extension with a bundled language server and a build-and-sideload workflow requiring no Rust toolchain on the recipient's machine.
+
 ## 0.1.3
 
 ### Patch Changes
