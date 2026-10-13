@@ -219,7 +219,7 @@ importers:
         version: 3.0.1(ajv@8.20.0)
       comline:
         specifier: 0.9.0
-        version: 0.9.0(arktype@2.2.7)
+        version: 0.9.0(arktype@2.2.7)(zod@4.6.5)
       ignore:
         specifier: 7.0.12
         version: 7.0.12
@@ -247,6 +247,9 @@ importers:
       yaml:
         specifier: 2.9.1
         version: 2.9.1
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: 26.6.5
@@ -262,7 +265,7 @@ importers:
         version: 4.0.0
       break-check:
         specifier: 0.8.2
-        version: 0.8.2
+        version: 0.8.2(zod@4.6.5)
       rolldown:
         specifier: 1.2.13
         version: 1.2.13
@@ -2409,6 +2412,9 @@ packages:
   yuku-parser@0.9.5:
     resolution: {integrity: sha512-IBnAdNVMswWbJcM7woPluOudectJzFjJ1N8jVRxP9Uq4CIv5hZdBIcdmtRbFDYF/Ph2j2gVup4YJ4N9mh0jYFA==}
 
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
 snapshots:
 
   '@ark/schema@0.56.6':
@@ -3483,6 +3489,17 @@ snapshots:
       - supports-color
       - zod
 
+  break-check@0.8.2(zod@4.6.5):
+    dependencies:
+      arktype: 2.2.7
+      comline: 0.9.0(arktype@2.2.7)(zod@4.6.5)
+      minimatch: 10.2.6
+      simple-git: 4.0.2
+      takua: 0.2.3
+    transitivePeerDependencies:
+      - supports-color
+      - zod
+
   buffer-crc32@0.2.13: {}
 
   buffer-equal-constant-time@1.0.1: {}
@@ -3513,6 +3530,14 @@ snapshots:
       treetrunks: 0.1.12
     optionalDependencies:
       arktype: 2.2.7
+
+  comline@0.9.0(arktype@2.2.7)(zod@4.6.5):
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      treetrunks: 0.1.12
+    optionalDependencies:
+      arktype: 2.2.7
+      zod: 4.6.5
 
   commander@12.1.0: {}
 
@@ -4290,3 +4315,5 @@ snapshots:
       '@yuku-parser/binding-linux-x64-musl': 0.9.5
       '@yuku-parser/binding-win32-arm64': 0.9.5
       '@yuku-parser/binding-win32-x64': 0.9.5
+
+  zod@4.6.5: {}

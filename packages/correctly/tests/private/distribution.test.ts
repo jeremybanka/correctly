@@ -43,6 +43,32 @@ describe("bundled distribution", () => {
 				"Run pnpm run build and pnpm run build:vsix before pnpm run test:distribution.",
 			)
 	})
+	test("built CLI uses Comline for help and completion without evaluating configuration", async () => {
+		const root = await temp()
+		await put(
+			root,
+			"correctly.config.ts",
+			'throw new Error("Help and completion must not execute configuration"); export default {}',
+		)
+		const invoke = (args: string[]) =>
+			spawnSync(
+				process.execPath,
+				[path.join(packageRoot, "dist/cli.mjs"), ...args],
+				{ cwd: root, encoding: "utf8" },
+			)
+		const help = invoke(["--help"])
+		expect(help.status).toBe(0)
+		expect(help.stderr).toBe("")
+		expect(help.stdout).toContain("completion install <target>")
+		const completion = invoke(["__complete", "check", "--format", "j"])
+		expect(completion.status).toBe(0)
+		expect(completion.stderr).toBe("")
+		expect(completion.stdout).toBe("json\n:4\n")
+		const script = invoke(["completion", "bash"])
+		expect(script.status).toBe(0)
+		expect(script.stderr).toBe("")
+		expect(script.stdout).toContain("_comline complete")
+	})
 	test("built CLI and isolated VSIX recognize GITIGNORE from the published config export", async () => {
 		const { root, uri } = await builtProject(undefined, {
 			exclude: [GITIGNORE],
