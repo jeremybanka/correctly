@@ -1,0 +1,84 @@
+{
+  "lockVersion": 1,
+  "schemas": {
+    "https://docs.renovatebot.com/renovate-schema.json": {
+      "digest": "84e7cc4e672d3c184fcfc885c5ed19f28322c35c96868d78004ec2fa07354642",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://dprint.dev/schemas/v0.json": {
+      "digest": "159e313348452ba435354be032433e6f4603b2397ae28a0909c0683c3990aa8f",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {
+        "@dprint/json": "0.25.2",
+        "@dprint/markdown": "0.26.0",
+        "@dprint/oxc": "0.44.0",
+        "@dprint/toml": "0.9.0",
+        "dprint": "0.60.1",
+        "dprint-plugin-yaml": "0.6.0"
+      }
+    },
+    "https://json.schemastore.org/ava.json": {
+      "digest": "3c02652299c240b152d8d30bc476dfa4bda7854132632dc9595afe53ac12ee0a",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/eslintrc.json": {
+      "digest": "2e7bf9df71bef201db128b6287c9d8b89bad4e7f8aa839d224e9c42141bb4e09",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/jscpd.json": {
+      "digest": "c4451c972dd7c5040375d01279d1e777f1cf672f0e227e2ea92e3ac4b106cfd7",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/madge.json": {
+      "digest": "b6e5ae0126cdfd73dcc1592bc91de0a8f246fde16fe9b7d0c0ad9c8b46b4a034",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/nodemon.json": {
+      "digest": "cc1c775543f377b9561fbf56e7a30a64dea18c0d7bff993ad1ad15ec8c3eaf04",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/partial-eslint-plugins.json": {
+      "digest": "64cb0d70799fccd67e24ae1befd7643a4808c78e383f361b820932aa80a5cf16",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/semantic-release.json": {
+      "digest": "0a471bd80eafbed9d250da67c2d6fbf2b6fab93d3cd1d627193875bf6a2c2168",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://json.schemastore.org/stylelintrc.json": {
+      "digest": "bbd2ced672f359a43a38f59d5cb380d6938e52f6cdf5058e9cea0870c9886efb",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://www.schemastore.org/package.json": {
+      "digest": "76767b4e0b941f048f20d6de3eef2b8dd5f2b09816913a26b4bbf1afbd31fd79",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://www.schemastore.org/prettierrc.json": {
+      "digest": "a5f9c7ed250e12c1b5fb7f0a2ae1b03e064513b40be96688cd2517925f42a6f0",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://www.schemastore.org/quikrun.json": {
+      "digest": "67cf4391e674bd17b77e893e97860d6d0c12f815a777251b65563c72e522b646",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {}
+    },
+    "https://www.schemastore.org/tsconfig.json": {
+      "digest": "4323b790e65e979876bd48c7387a5150520e0c4cf1e36c221252a7234c2bd70a",
+      "discoveredAt": "2026-10-13T17:58:44.845Z",
+      "packages": {
+        "typescript": "7.0.2"
+      }
+    }
+  }
+}

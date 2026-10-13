@@ -24,6 +24,7 @@ export const DEFAULT_EXCLUDES = [
 	"**/dist/**",
 	"**/artifacts/**",
 	"**/.correctly-cache/**",
+	"**/.correctly/**",
 ]
 export type RemoteOptions = {
 	offline?: boolean
@@ -38,6 +39,8 @@ export type ProjectConfig = {
 	associations: {
 		name?: string
 		files: string[]
+		/** Installed Node packages whose versions are recorded when schemas are pulled. */
+		packages?: string[]
 		parse?: Parser
 		validate: Validator | null
 	}[]
@@ -95,8 +98,20 @@ export function validateConfig(value: unknown): ProjectConfig {
 		throw new CorrectlyError("config", "associations must be an array")
 	for (const [index, rule] of value.associations.entries()) {
 		const at = `associations[${index}]`
-		object(rule, at, ["name", "files", "parse", "validate"])
+		object(rule, at, ["name", "files", "packages", "parse", "validate"])
 		patterns(rule.files, `${at}.files`)
+		if (rule.packages !== undefined) {
+			if (!Array.isArray(rule.packages) || !rule.packages.length)
+				throw new CorrectlyError(
+					"config",
+					`${at}.packages must be a nonempty array`,
+				)
+			for (const name of rule.packages) {
+				string(name, `${at}.packages[]`)
+				if (!/^(?:@[a-z0-9._-]+\/)?[a-z0-9][a-z0-9._-]*$/i.test(name))
+					throw new CorrectlyError("config", `Invalid package name: ${name}`)
+			}
+		}
 		if (rule.name !== undefined) string(rule.name, `${at}.name`)
 		if (rule.parse !== undefined) {
 			object(rule.parse, `${at}.parse`)

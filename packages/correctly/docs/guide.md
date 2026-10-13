@@ -246,11 +246,78 @@ export default defineConfig({
 
 Schema associations accept local paths, `file:` URIs, and HTTP(S) URLs, optionally with pointer or anchor fragments. Relative references resolve from their schema resource's `$id`, or its retrieval URI when there is no identifier. Relative `$id` values are resolved from their parent resource. Configured schema resources are registered before compilation, so identifiers can refer to other configured local schemas without needing to host them. References to unloaded identifiers use the loader. Cycles and nested resources are resolved by Ajv. Only supported dialect graphs are accepted.
 
-Remote requests have a total timeout per resource, a byte limit, at most five redirects, and a resource-count limit per engine. Defaults are shown above; maximum configuration values are 60 seconds, 16 MiB, and 256 resources. Cache entries are keyed by the full retrieval URL without its fragment. Online loads refresh cache entries and send ETag/Last-Modified validators when available. Requests without validators fetch again. Network or HTTP failures never silently fall back to stale cache. Local and loaded remote resources and compiled validators are reused for the life of an engine.
+Remote requests have a total timeout per resource, a byte limit, at most five redirects, and a resource-count limit per engine. Defaults are shown above; maximum configuration values are 60 seconds, 16 MiB, and 256 resources. Without a schema lock, cache entries are keyed by the full retrieval URL without its fragment. Online loads refresh cache entries and send ETag/Last-Modified validators when available. Requests without validators fetch again. Network or HTTP failures never silently fall back to stale cache. Local and loaded remote resources and compiled validators are reused for the life of an engine.
 
-`correctly check --offline` prevents all HTTP requests; a missing or corrupt cached schema fails with exit 2. Warm the cache with an online check, retain the cache directory in CI, then validate offline. Local references still work offline. Cache location is explicit and portable when kept with the project's CI cache. Schema resource size limits also apply to local schemas.
+`correctly check --offline` prevents all HTTP requests. With a schema lock, it uses vendored resources; otherwise, a missing or corrupt cached schema fails with exit 2. Warm the cache with an online check, retain the cache directory in CI, then validate offline. Local references still work offline. Cache location is explicit and portable when kept with the project's CI cache. Schema resource size limits also apply to local schemas.
 
-Editor watchers refresh saved configurations, imported modules (including transitive imports and missing relative import candidates), package manifests/lockfiles, and local schema dependencies. Dependencies outside workspace roots receive explicit watchers. Unsaved schema edits also invalidate validators and hints. A failed reload replaces the previous session with visible failures; old validators never continue silently. Relevant schema/configuration changes and server restart refresh remote schemas. Cache writes and unrelated JSON changes do not trigger reloads. Remote servers do not send change notifications, so remote changes require one of those refresh triggers. Cancellation and document version/generation guards prevent older work from publishing diagnostics or hints after newer edits. Closing a buffer returns it to disk contents; closing a document clears its diagnostics.
+Editor watchers refresh saved configurations, imported modules (including transitive imports and missing relative import candidates), package manifests/lockfiles, local schema dependencies, and the schema lock and vendored resources. Dependencies outside workspace roots receive explicit watchers. Unsaved schema edits also invalidate validators and hints. A failed reload replaces the previous session with visible failures; old validators never continue silently. With a lock, reloads keep using the pinned snapshots; without one, relevant schema/configuration changes and server restart refresh remote schemas. Cache writes and unrelated JSON changes do not trigger reloads. Remote servers do not send change notifications, so remote changes require one of those refresh triggers. Cancellation and document version/generation guards prevent older work from publishing diagnostics or hints after newer edits. Closing a buffer returns it to disk contents; closing a document clears its diagnostics.
+
+## Vendoring schemas
+
+Keep the upstream URL in an association and optionally name the Node packages whose installed versions provide provenance:
+
+```ts
+import { defineConfig } from "correctly"
+import { ajv } from "correctly/validators/ajv"
+
+export default defineConfig({
+	associations: [
+		{
+			name: "Tool configuration",
+			files: ["tool.json"],
+			packages: ["@example/tool"],
+			validate: ajv({ schema: "https://example.com/tool.schema.json" }),
+		},
+	],
+})
+```
+
+Install dependencies, then run:
+
+```sh
+correctly schemas pull
+correctly check --offline
+```
+
+Commit `.correctly/lock.json` and `.correctly/schemas/`. Both live beside `correctly.config.ts`; running the command from a subdirectory discovers that configuration. `--config` resolves from the working directory. `.correctly/` is excluded from document discovery automatically. Exclude it from formatters as well: digests cover the UTF-8 schema text, so formatting a vendored file changes its integrity.
+
+The versioned lock maps retrieval URLs without fragments to `digest` (SHA-256 in hexadecimal), `discoveredAt` (UTC ISO timestamp), and `packages` (package name to exact installed version). Files are named `.correctly/schemas/<digest>.json`. Associated package versions come from installed manifests resolved from the configuration, including scoped packages with restricted exports; dependency ranges in `package.json` are not used. Missing associated packages fail the pull. Package metadata records the environment in which a schema was observed, and does not prove compatibility with those versions. Schemas for software outside Node can still be vendored with an empty package map.
+
+Pull fetches fresh copies of every configured schema's remote graph, including remote references reached through local schemas and unused definitions, under the normal timeout, byte and resource limits. It ignores the HTTP cache and existing snapshots. Schema identifiers, relative reference bases, pointer fragments and anchors retain their original meaning. Shared referenced resources record the combined associated packages. `$ref` in annotation data is not followed. Correctly prepares configured validators before committing the snapshot; malformed schemas or failed downloads leave the previous lock intact. Old content-addressed files are retained, so restoring an earlier lock restores its schema selection too. Identical schema bytes and package versions preserve discovery timestamps on repeat pulls.
+
+Once the lock exists, `SchemaStore` and the built-in Ajv adapter use vendored resources during online and offline checks and editor assistance. They verify digests and fail with `schema-lock` for missing/unpinned resources or invalid locks, and `schema-integrity` for modified resources; they never fall back to the HTTP cache or network. Adding another remote association requires another pull. Local schemas continue to be read from their original files. Custom validators must use `SchemaStore` to participate in locking; arbitrary networking inside adapters is outside this mechanism. Removing the lock restores the ordinary remote-cache behavior.
+
+### Dependency update automation
+
+Run pull after installing updated dependencies, and include the `.correctly/` diff in the dependency update review. Document validation belongs in CI: a structurally valid upstream regression should produce an upgrade PR whose CI fails, preserving the updated dependencies and schema snapshots as a baseline to investigate or repair. Correctly cannot recover an upstream version that was never saved.
+
+[Renovate post-upgrade tasks](https://docs.renovatebot.com/configuration-options/#postupgradetasks) can install the new dependencies and pull schemas before making the update commit. The Renovate administrator must allow these commands via the global `allowedCommands` setting; hosted support depends on the service's configuration. For an installation using pnpm:
+
+```json
+{
+	"packageRules": [{
+		"matchPackageNames": ["@example/tool"],
+		"postUpgradeTasks": {
+			"commands": [
+				"pnpm install --frozen-lockfile --ignore-scripts",
+				"pnpm exec correctly schemas pull"
+			],
+			"fileFilters": [".correctly/**"],
+			"executionMode": "branch"
+		}
+	}]
+}
+```
+
+The package rule triggers on the associated dependency; pull refreshes all configured schema graphs. Where post-upgrade commands are unavailable, run those same steps in your dependency-update workflow and include the generated files in its pull request. `correctly schemas pull --format json` emits the complete resulting lock for automation. Pull requires online mode and returns exit 2 on failure.
+
+Run document validation in CI on the resulting upgrade PR:
+
+```sh
+pnpm exec correctly check --offline
+```
+
+This lets Renovate create the upgrade PR even when its new schemas reject existing documents. CI reports the failures on that PR, where the dependency, schema, and document changes can be investigated together.
 
 ## CLI and report contract
 

@@ -8,7 +8,10 @@ import type {
 	Validator,
 } from "./adapters.ts"
 
-export type EngineOptions = StoreOptions & {
+export type EngineOptions = Pick<
+	StoreOptions,
+	"offline" | "read" | "fetch" | "signal"
+> & {
 	onDependency?: (uri: string) => void
 }
 export class Engine {
