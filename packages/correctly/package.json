@@ -59,7 +59,8 @@
 		"vscode-json-languageservice": "5.7.2",
 		"vscode-languageserver": "10.1.2",
 		"vscode-languageserver-textdocument": "1.0.15",
-		"yaml": "2.9.1"
+		"yaml": "2.9.1",
+		"zod": "4.6.5"
 	},
 	"devDependencies": {
 		"@types/node": "26.6.5",

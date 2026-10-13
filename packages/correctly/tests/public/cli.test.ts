@@ -475,7 +475,9 @@ test("Comline warnings go to stderr while checks retain pure JSON stdout", async
 		{ cwd: root, encoding: "utf8" },
 	)
 	expect(repeated.status).toBe(2)
-	expect(repeated.stdout).toContain("Unknown report format: json,readable")
+	expect(repeated.stdout).toContain("format:")
+	expect(repeated.stdout).toContain('"readable"')
+	expect(repeated.stdout).toContain('"json"')
 })
 
 test("real repository configuration fixtures pass and invalid variants fail", async () => {

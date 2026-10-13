@@ -9,6 +9,7 @@ import {
 	type CompletionTargetFormat,
 	type OptionsGroup,
 } from "comline"
+import { z } from "zod/v4"
 
 const reportFormats = ["readable", "json"] as const
 const completionTargets = [
@@ -19,73 +20,17 @@ const completionTargets = [
 	"carapace",
 ] as const satisfies readonly CompletionTargetFormat[]
 
-type CheckOptions = {
-	config?: string
-	offline?: boolean
-	format: (typeof reportFormats)[number]
-	help?: boolean
-}
-
-const optionsJsonSchema = () => ({
-	type: "object",
-	additionalProperties: false,
-	properties: {
-		config: { type: "string", minLength: 1 },
-		offline: { type: "boolean" },
-		format: { enum: reportFormats, default: "readable" },
-		help: { type: "boolean" },
-	},
+const checkOptionsSchema = z.strictObject({
+	config: z.string().min(1).optional(),
+	offline: z.boolean().optional(),
+	format: z.enum(reportFormats).default("readable"),
+	help: z.boolean().optional(),
 })
+type CheckOptions = z.infer<typeof checkOptionsSchema>
 
 const checkOptions = options<CheckOptions>(
 	"Validate discovered files or the supplied files.",
-	{
-		"~standard": {
-			version: 1,
-			vendor: "correctly",
-			validate: (value: unknown) => {
-				if (typeof value !== "object" || value === null || Array.isArray(value))
-					return { issues: [{ message: "Expected an options object" }] }
-				const { config, offline, format, help } = value as Record<
-					string,
-					unknown
-				>
-				if (
-					config !== undefined &&
-					(typeof config !== "string" || !config.length)
-				)
-					return {
-						issues: [
-							{ message: "Expected a configuration path", path: ["config"] },
-						],
-					}
-				if (offline !== undefined && typeof offline !== "boolean")
-					return {
-						issues: [{ message: "Expected a boolean", path: ["offline"] }],
-					}
-				if (format !== undefined && format !== "readable" && format !== "json")
-					return {
-						issues: [
-							{
-								message: `Unknown report format: ${typeof format === "string" ? format : JSON.stringify(format)}`,
-								path: ["format"],
-							},
-						],
-					}
-				if (help !== undefined && typeof help !== "boolean")
-					return { issues: [{ message: "Expected a boolean", path: ["help"] }] }
-				return {
-					value: {
-						...(config === undefined ? {} : { config }),
-						...(offline === undefined ? {} : { offline }),
-						format: format ?? "readable",
-						...(help === undefined ? {} : { help }),
-					},
-				}
-			},
-			jsonSchema: { input: optionsJsonSchema, output: optionsJsonSchema },
-		},
-	},
+	checkOptionsSchema,
 	{
 		config: {
 			flag: "c",
