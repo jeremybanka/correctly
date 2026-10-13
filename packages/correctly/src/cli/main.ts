@@ -52,7 +52,7 @@ export async function run(
 			return {
 				output: json
 					? JSON.stringify(lock, null, 2)
-					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/`,
+					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/; wrote correctly.lock`,
 				exitCode: 0,
 			}
 		}
