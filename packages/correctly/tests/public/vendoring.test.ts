@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process"
 import { once } from "node:events"
-import { readFile, rm } from "node:fs/promises"
+import { mkdir, readFile, readdir, rm } from "node:fs/promises"
 import { createServer } from "node:http"
 import type { AddressInfo } from "node:net"
 import path from "node:path"
@@ -17,6 +17,7 @@ import { pullSchemas } from "../../src/core/pull.ts"
 import {
 	readSchemaLock,
 	SCHEMA_LOCK,
+	LEGACY_SCHEMA_LOCK,
 	schemaDigest,
 	vendoredSchemaPath,
 } from "../../src/core/schema-lock.ts"
@@ -130,6 +131,8 @@ test("failed updates preserve the previous lock and schema; successful updates c
 		fetch: documents({ [url]: { type: "string" } }),
 	})
 	const original = await readFile(path.join(root, SCHEMA_LOCK), "utf8")
+	const schemaFile = vendoredSchemaPath(root, url)
+	const originalSchema = await readFile(schemaFile, "utf8")
 	for (const fetch of [
 		documents({}),
 		async () => new Response("{"),
@@ -138,6 +141,7 @@ test("failed updates preserve the previous lock and schema; successful updates c
 	]) {
 		await expect(pullSchemas(project, { fetch })).rejects.toThrow()
 		expect(await readFile(path.join(root, SCHEMA_LOCK), "utf8")).toBe(original)
+		expect(await readFile(schemaFile, "utf8")).toBe(originalSchema)
 	}
 	await pullSchemas(project, {
 		fetch: documents({ [url]: { type: "number" } }),
@@ -149,6 +153,11 @@ test("failed updates preserve the previous lock and schema; successful updates c
 	await put(root, SCHEMA_LOCK, first)
 	expect(
 		(await new Engine(project, { fetch: noNetwork }).validate(file, "2"))
+			.failures[0]?.code,
+	).toBe("schema-integrity")
+	await put(root, path.relative(root, schemaFile), originalSchema)
+	expect(
+		(await new Engine(project, { fetch: noNetwork }).validate(file, "2"))
 			.diagnostics[0]?.code,
 	).toBe("schema/type")
 })
@@ -158,7 +167,7 @@ test("missing, corrupted, and unpinned schemas fail without a network fallback",
 	const lock = await pullSchemas(project, {
 		fetch: documents({ [url]: { type: "string" } }),
 	})
-	const blob = vendoredSchemaPath(root, lock.schemas[url]!.digest)
+	const blob = vendoredSchemaPath(root, url)
 	await put(root, path.relative(root, blob), { type: "number" })
 	expect(
 		(await new Engine(project, { fetch: noNetwork }).validate(file, "2"))
@@ -174,7 +183,7 @@ test("missing, corrupted, and unpinned schemas fail without a network fallback",
 		(await new Engine(project, { fetch: noNetwork }).validate(file, "2"))
 			.failures[0]?.message,
 	).toContain("not locked")
-	await put(root, SCHEMA_LOCK, { lockVersion: 2, schemas: {} })
+	await put(root, SCHEMA_LOCK, { lockVersion: 3, schemas: {} })
 	await expect(readSchemaLock(root)).rejects.toThrow("lockVersion 1")
 	await put(root, SCHEMA_LOCK, {
 		lockVersion: 1,
@@ -336,12 +345,157 @@ test("LSP uses locked schemas and reloads when a pull replaces the lock", async 
 		"schema/type",
 	)
 	// Editing a blob cannot silently change validation under the locked digest.
-	const lock = (await readSchemaLock(root))!
-	const blob = vendoredSchemaPath(root, lock.schemas[url]!.digest)
+	const blob = vendoredSchemaPath(root, url)
 	await client.open(pathToFileURL(blob).href, '{"type":"string"}')
 	const changed = client.notifications.length
 	await client.change(uri, '"valid"', 2)
 	expect((await client.wait(uri, 2, changed)).diagnostics[0]?.code).toBe(
 		"schema-integrity",
 	)
+})
+
+test("vendored filenames reflect retrieval URLs and distinguish filesystem-sensitive names", async () => {
+	const { root } = await remoteProject()
+	expect(vendoredSchemaPath(root, "https://dprint.dev/schemas/v0.json")).toBe(
+		path.join(root, ".correctly/schemas/https--dprint.dev__schemas__v0.json"),
+	)
+	const sources = [
+		"https://example.test/foo/bar.json",
+		"https://example.test/foo__bar.json",
+		"https://example.test/Foo/bar.json",
+		"http://example.test/foo/bar.json",
+		"https://example.test:8443/foo/bar.json",
+		"https://example.test/foo/bar.json?version=1",
+		"https://example.test/foo/bar.json?version=2",
+		"https://example.test/foo%2Fbar.json",
+		"https://example.test/foo%2fbar.json",
+		"https://example.test/",
+		"https://example.test/schema.",
+		"https://example.test/schema%2E",
+		"https://example.test/../../outside.json?name=../escape",
+	]
+	const files = sources.map((uri) => vendoredSchemaPath(root, uri))
+	expect(new Set(files.map((file) => file.toLowerCase())).size).toBe(
+		sources.length,
+	)
+	for (const file of files) {
+		expect(path.dirname(file)).toBe(path.join(root, ".correctly", "schemas"))
+		expect(path.basename(file)).not.toMatch(/[\\/:*?"<>|]|\.$/)
+	}
+	expect(vendoredSchemaPath(root, `${sources[0]}#/value`)).toBe(files[0])
+	expect(() => vendoredSchemaPath(root, "file:///schema.json")).toThrow(
+		"Unsupported retrieval URL",
+	)
+})
+
+test("legacy snapshots validate offline and migrate without losing observation metadata", async () => {
+	const { project, root, file } = await remoteProject()
+	const text = '{"type":"string"}'
+	const digest = schemaDigest(text)
+	const legacy = {
+		lockVersion: 1,
+		schemas: {
+			[url]: { digest, discoveredAt: "2020-01-01T00:00:00.000Z", packages: {} },
+		},
+	}
+	await put(root, LEGACY_SCHEMA_LOCK, legacy)
+	await put(root, `.correctly/schemas/${digest}.json`, text)
+	expect(
+		await new Engine(project, { fetch: noNetwork, offline: true }).validate(
+			file,
+			'"valid"',
+		),
+	).toMatchObject({
+		failures: [],
+		diagnostics: [],
+	})
+	const migrated = await pullSchemas(project, {
+		fetch: documents({ [url]: { type: "string" } }),
+	})
+	expect(migrated).toEqual({ ...legacy, lockVersion: 2 })
+	expect(await readFile(vendoredSchemaPath(root, url), "utf8")).toBe(text)
+	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+	expect(await readSchemaLock(root)).toEqual(migrated)
+	expect(
+		await new Engine(project, { fetch: noNetwork, offline: true }).validate(
+			file,
+			'"valid"',
+		),
+	).toMatchObject({
+		failures: [],
+		diagnostics: [],
+	})
+	// An invalid new lock must not fall back to an older, otherwise valid snapshot.
+	await put(root, LEGACY_SCHEMA_LOCK, legacy)
+	await put(root, SCHEMA_LOCK, "{")
+	await expect(readSchemaLock(root)).rejects.toThrow("Invalid")
+})
+
+test("snapshot publication errors restore the previous URL-named schemas", async () => {
+	const { project, root, file } = await remoteProject()
+	await pullSchemas(project, {
+		fetch: documents({ [url]: { type: "string" } }),
+	})
+	const originalLock = await readFile(path.join(root, SCHEMA_LOCK), "utf8")
+	const schemaFile = vendoredSchemaPath(root, url)
+	const originalSchema = await readFile(schemaFile, "utf8")
+	await expect(
+		pullSchemas(project, {
+			fetch: async () => {
+				// Simulate the lock becoming unwritable after the previous observation was read.
+				await rm(path.join(root, SCHEMA_LOCK))
+				await mkdir(path.join(root, SCHEMA_LOCK))
+				return new Response('{"type":"number"}')
+			},
+		}),
+	).rejects.toThrow()
+	expect(await readFile(schemaFile, "utf8")).toBe(originalSchema)
+	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+	await rm(path.join(root, SCHEMA_LOCK), { recursive: true })
+	await put(root, SCHEMA_LOCK, originalLock)
+	expect(
+		await new Engine(project, { fetch: noNetwork }).validate(file, '"valid"'),
+	).toMatchObject({
+		failures: [],
+		diagnostics: [],
+	})
+})
+
+test("concurrent pulls publish a graph whose files agree with its lock", async () => {
+	const { project, root, file } = await remoteProject()
+	await pullSchemas(project, {
+		fetch: documents({ [url]: { type: "boolean" } }),
+	})
+	let arrived = 0
+	let release: () => void = () => {}
+	const ready = new Promise<void>((resolve) => {
+		release = resolve
+	})
+	const snapshot =
+		(type: string): typeof fetch =>
+		async () => {
+			if (++arrived === 2) release()
+			await ready
+			return new Response(JSON.stringify({ type }))
+		}
+	const results = await Promise.allSettled([
+		pullSchemas(project, { fetch: snapshot("string") }),
+		pullSchemas(project, { fetch: snapshot("number") }),
+	])
+	expect(results.some((result) => result.status === "fulfilled")).toBe(true)
+	const text = await readFile(vendoredSchemaPath(root, url), "utf8")
+	expect((await readSchemaLock(root))!.schemas[url]!.digest).toBe(
+		schemaDigest(text),
+	)
+	const type = (JSON.parse(text) as { type: string }).type
+	expect(
+		await new Engine(project, { fetch: noNetwork }).validate(
+			file,
+			type === "string" ? '"valid"' : "2",
+		),
+	).toMatchObject({
+		failures: [],
+		diagnostics: [],
+	})
+	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
 })

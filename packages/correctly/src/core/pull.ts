@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto"
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import {
+	mkdir,
+	mkdtemp,
+	open,
+	readFile,
+	rename,
+	rm,
+	writeFile,
+} from "node:fs/promises"
 import { createRequire } from "node:module"
 import path from "node:path"
 import type { SchemaObject } from "ajv"
@@ -14,6 +22,7 @@ import { schemaChildren } from "./schema-walk.ts"
 import {
 	readSchemaLock,
 	SCHEMA_LOCK,
+	LEGACY_SCHEMA_LOCK,
 	schemaDigest,
 	vendoredSchemaPath,
 	type SchemaLock,
@@ -133,7 +142,7 @@ export async function pullSchemas(
 	} finally {
 		await engine.dispose()
 	}
-	const lock: SchemaLock = { lockVersion: 1, schemas: {} }
+	const lock: SchemaLock = { lockVersion: 2, schemas: {} }
 	const discoveredAt = new Date().toISOString()
 	for (const [uri, text] of [...texts].sort(([a], [b]) => a.localeCompare(b))) {
 		const digest = schemaDigest(text)
@@ -150,20 +159,78 @@ export async function pullSchemas(
 				: { digest, discoveredAt, packages }
 	}
 	options.signal?.throwIfAborted()
-	await mkdir(path.join(project.root, ".correctly", "schemas"), {
-		recursive: true,
-	})
-	for (const [uri, text] of texts) {
-		const file = vendoredSchemaPath(project.root, lock.schemas[uri]!.digest)
-		await atomicWrite(file, text)
-	}
-	// Content-addressed files remain usable by the old lock until this rename succeeds.
-	options.signal?.throwIfAborted()
-	await atomicWrite(
-		path.join(project.root, SCHEMA_LOCK),
-		`${JSON.stringify(lock, null, 2)}\n`,
-	)
+	await publishSnapshot(project.root, texts, lock, options.signal)
 	return lock
+}
+
+async function publishSnapshot(
+	root: string,
+	texts: Map<string, string>,
+	lock: SchemaLock,
+	signal?: AbortSignal,
+): Promise<void> {
+	const directory = path.join(root, ".correctly")
+	await mkdir(directory, { recursive: true })
+	const guardPath = path.join(directory, "pull.lock")
+	const guard = await open(guardPath, "wx").catch((error: unknown) => {
+		if ((error as NodeJS.ErrnoException).code === "EEXIST")
+			throw new CorrectlyError(
+				"schema-lock",
+				`Another schema pull is publishing a snapshot: ${guardPath}`,
+			)
+		throw error
+	})
+	let stage: string | undefined
+	const schemas = path.join(directory, "schemas")
+	let movedPrevious = false,
+		installed = false,
+		committed = false
+	try {
+		stage = await mkdtemp(path.join(directory, ".pull-"))
+		const incoming = path.join(stage, "schemas")
+		const previous = path.join(stage, "previous")
+		await mkdir(incoming)
+		for (const [uri, text] of texts)
+			await writeFile(
+				path.join(incoming, path.basename(vendoredSchemaPath(root, uri))),
+				text,
+			)
+		signal?.throwIfAborted()
+		try {
+			await rename(schemas, previous)
+			movedPrevious = true
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+		}
+		await rename(incoming, schemas)
+		installed = true
+		signal?.throwIfAborted()
+		await atomicWrite(
+			path.join(root, SCHEMA_LOCK),
+			`${JSON.stringify(lock, null, 2)}\n`,
+		)
+		committed = true
+		// Cleanup must not roll back a snapshot after its new lock has been published.
+		await rm(path.join(root, LEGACY_SCHEMA_LOCK), { force: true }).catch(
+			() => {},
+		)
+	} catch (error) {
+		if (installed) await rm(schemas, { recursive: true, force: true })
+		if (movedPrevious && stage) {
+			await rename(path.join(stage, "previous"), schemas)
+			movedPrevious = false
+		}
+		throw error
+	} finally {
+		// Keep the backup available for recovery if the filesystem prevents rollback.
+		try {
+			if (stage && (committed || !movedPrevious))
+				await rm(stage, { recursive: true, force: true })
+		} finally {
+			await guard.close()
+			await rm(guardPath, { force: true })
+		}
+	}
 }
 
 async function atomicWrite(file: string, text: string): Promise<void> {

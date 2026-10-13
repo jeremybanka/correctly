@@ -25,6 +25,7 @@ export const DEFAULT_EXCLUDES = [
 	"**/artifacts/**",
 	"**/.correctly-cache/**",
 	"**/.correctly/**",
+	"**/correctly.lock",
 ]
 export type RemoteOptions = {
 	offline?: boolean

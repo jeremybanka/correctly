@@ -267,7 +267,15 @@ export class SchemaStore {
 						"schema-lock",
 						`Schema is not locked: ${uri}; run correctly schemas pull`,
 					)
-				const file = vendoredSchemaPath(this.root, entry.digest)
+				const file =
+					lock.lockVersion === 1
+						? path.join(
+								this.root,
+								".correctly",
+								"schemas",
+								`${entry.digest}.json`,
+							)
+						: vendoredSchemaPath(this.root, uri)
 				let text: string
 				try {
 					text = await this.read(pathToFileURL(file).href)

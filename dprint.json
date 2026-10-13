@@ -13,7 +13,8 @@
 		"**/pnpm-lock.yaml",
 		"**/tests/public/fixtures/**",
 		".correctly-cache/**",
-		"**/.correctly/**"
+		"**/.correctly/**",
+		"**/correctly.lock"
 	],
 	"oxc": {
 		"associations": [
