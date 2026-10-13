@@ -11,6 +11,11 @@ import type { Report } from "../../src/core/types.ts"
 const entry = fileURLToPath(new URL("../../src/cli/main.ts", import.meta.url))
 test("CLI help documents commands and options without loading configuration", async () => {
 	const root = await temp()
+	await put(
+		root,
+		"correctly.config.ts",
+		'throw new Error("Help must not execute configuration"); export default {}',
+	)
 	let output: string | undefined
 	for (const args of [
 		[],
@@ -18,6 +23,9 @@ test("CLI help documents commands and options without loading configuration", as
 		["-h"],
 		["check", "--help"],
 		["check", "-h"],
+		["check", "--config", "missing.ts", "--format", "invalid", "--help"],
+		["completion", "--help"],
+		["completion", "install", "--help"],
 	]) {
 		const result = spawnSync(process.execPath, [entry, ...args], {
 			cwd: root,
@@ -40,6 +48,7 @@ test("CLI help documents commands and options without loading configuration", as
 		expect(output).toContain(option)
 	expect(output).toContain("default: readable")
 	expect(output).toContain("correctly-lsp --stdio")
+	expect(output).toContain("completion install <target>")
 	expect(output).toContain("Exit 0: valid; 1: document errors; 2:")
 })
 
@@ -356,13 +365,117 @@ test("configuration discovery and argument errors produce exit 2", async () => {
 	const root = await temp()
 	for (const args of [
 		["check"],
-		["check", "--unknown"],
 		["check", "--format", "invalid"],
+		["check", "--format"],
+		["check", "--config"],
 		["unknown"],
+		["completion", "invalid"],
+		["completion", "install", "invalid"],
 	])
 		expect(
 			spawnSync(process.execPath, [entry, ...args], { cwd: root }).status,
 		).toBe(2)
+})
+
+test("Comline captures file arguments, consumes option values, and honors --", async () => {
+	const { root, configPath } = await setup(undefined, {
+		files: ["data/*.json", "--*.json"],
+		associations: [{ files: ["**/*.json"], schema: "schema.json" }],
+	})
+	await put(root, "data/first.json", { name: "first" })
+	await put(root, "data/a file.json", { name: "second" })
+	await put(root, "--format=json.json", { name: "literal" })
+	for (const args of [
+		[
+			"--format=json",
+			"-c",
+			configPath,
+			"check",
+			"data/first.json",
+			"--offline=false",
+			"data/a file.json",
+		],
+		[
+			"check",
+			"data/first.json",
+			"--offline",
+			"false",
+			"data/a file.json",
+			"--config",
+			configPath,
+			"--format",
+			"json",
+		],
+		[
+			"check",
+			"--help=false",
+			"--offline=0",
+			`-c=${configPath}`,
+			"--format=json",
+			"data/first.json",
+			"data/a file.json",
+		],
+	]) {
+		const result = spawnSync(process.execPath, [entry, ...args], {
+			cwd: root,
+			encoding: "utf8",
+		})
+		expect(result.status).toBe(0)
+		expect(result.stderr).toBe("")
+		const report = JSON.parse(result.stdout) as Report
+		expect(report.summary).toMatchObject({ checked: 2, schemaCovered: 2 })
+		expect(report.files.map(({ file }) => path.relative(root, file))).toEqual([
+			"data/a file.json",
+			"data/first.json",
+		])
+	}
+	const literal = spawnSync(
+		process.execPath,
+		[entry, "check", "--format=json", "--", "--format=json.json"],
+		{ cwd: root, encoding: "utf8" },
+	)
+	expect(literal.status).toBe(0)
+	expect(
+		(JSON.parse(literal.stdout) as Report).files.map(({ file }) =>
+			path.relative(root, file),
+		),
+	).toEqual(["--format=json.json"])
+})
+
+test("Comline warnings go to stderr while checks retain pure JSON stdout", async () => {
+	const { root } = await setup()
+	await put(root, "data/test.json", { name: "valid" })
+	const result = spawnSync(
+		process.execPath,
+		[entry, "check", "--unknown", "--format=json"],
+		{
+			cwd: root,
+			encoding: "utf8",
+			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+		},
+	)
+	expect(result.status).toBe(0)
+	expect(JSON.parse(result.stdout)).toEqual(await check({ cwd: root }))
+	expect(result.stderr).toContain('Warning: Unknown option "--unknown"')
+	const failed = spawnSync(
+		process.execPath,
+		[entry, "check", "--format=json", "--config"],
+		{ cwd: root, encoding: "utf8" },
+	)
+	expect(failed.status).toBe(2)
+	expect(failed.stderr).toBe("")
+	expect(JSON.parse(failed.stdout)).toMatchObject({
+		reportVersion: 2,
+		exitCode: 2,
+		failures: [{ code: "execution" }],
+	})
+	const repeated = spawnSync(
+		process.execPath,
+		[entry, "check", "--format=json", "--format=readable"],
+		{ cwd: root, encoding: "utf8" },
+	)
+	expect(repeated.status).toBe(2)
+	expect(repeated.stdout).toContain("Unknown report format: json,readable")
 })
 
 test("real repository configuration fixtures pass and invalid variants fail", async () => {

@@ -326,8 +326,29 @@ correctly check
 correctly check --config config/correctly.config.ts
 correctly check config/application.json --format json
 correctly check --offline
+correctly --help
+correctly completion bash
+correctly completion install bash
 correctly-lsp --stdio
 ```
+
+Comline's shared command definition supplies argument parsing, option validation, help, warnings, and shell completions. `check` with no file arguments discovers configured files; explicit files are captured in order, including paths containing spaces. Options can appear before the command or between files. Use `--` before a filename beginning with `-`. `-c` abbreviates `--config`, and `-h` abbreviates `--help`. Help skips configuration loading, including `correctly check --help` and `correctly completion install --help`.
+
+Boolean options follow Comline's semantics: a bare `--offline` enables offline mode, while `--offline=false`, `--offline=0`, or `--offline false` disables it. Unknown options are ignored with warnings on stderr; they do not independently change the validation exit status. Repeated option values are comma-joined: repeating `--format` produces an invalid combined format, and repeating `--config` produces one combined path. Missing configuration-path and report-format values fail with exit 2. These parsing rules replace Node's `parseArgs` behavior.
+
+`correctly completion <target>` prints a standalone setup artifact for Bash, Zsh, Fish, Nushell, or Carapace. `correctly completion install <target>` installs it into the selected integration's recognized user directory and reports the path. Installation uses Comline's native installer, queries the shell's configured completion paths, and leaves shell profiles alone. Open a new shell after installation. For example:
+
+```sh
+correctly completion install bash
+correctly completion install zsh
+correctly completion install fish
+correctly completion install nushell
+correctly completion install carapace
+```
+
+Bash requires Bash 4+ with bash-completion 2.18+ enabled; Zsh requires `compinit`; Fish requires Fish 4+; Nushell requires Nu 0.116+ with external completions enabled; Carapace requires an existing Carapace shell integration. If a shell already uses Carapace, install the Carapace target. The printed artifacts also support manual or distribution-package installation.
+
+Completion suggests commands, long and short options, report formats, completion targets, configuration paths, and input files. Completions omit configuration, format, and offline options once supplied. Shell adapters handle filesystem discovery and quoting. Completion protocols and script generation do not load or evaluate project configuration and do not validate documents. Bash, Zsh, and Fish use Comline's native transport; Nushell and Carapace have their native JSON protocols. Cobra-compatible `__complete` and `__completeNoDesc` requests are supported as well. Generated integrations query the CLI dynamically; reinstall them after upgrades that change the shell adapter.
 
 Exit 0 means no validation or infrastructure failures; exit 1 means at least one invalid document; exit 2 means a configuration/schema/loading/execution failure, which takes priority over document errors. All configured associations are prepared even when their patterns match no documents, preventing unused broken schema maps from going unnoticed. Readable output identifies every file's coverage and selected association. JSON output is a single object without progress text or a filtering workaround.
 

@@ -1,5 +1,5 @@
 ---
-"correctly": patch
+"correctly": minor
 ---
 
-Render CLI help with Comline's standard help utility, including option descriptions and short flags.
+Use Comline for CLI parsing, validated options, help, warnings, and shell completions; unknown options now warn on stderr, booleans accept explicit values, and repeated option values follow Comline's comma-joining semantics.

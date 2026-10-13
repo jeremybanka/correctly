@@ -1,42 +1,53 @@
 #!/usr/bin/env node
-import { parseArgs } from "node:util"
 import path from "node:path"
-import { discoverConfig, loadProject } from "../core/config.ts"
-import { pullSchemas } from "../core/pull.ts"
-import { check, readableReport } from "./check.ts"
-import { cliHelp } from "./help.ts"
+import {
+	completionResponse,
+	help,
+	interpretArguments,
+	logWarnings,
+	parseBooleanOption,
+	type CliWarning,
+} from "comline"
+import { correctlyCli } from "./definition.ts"
 import { failure, type Report } from "../core/types.ts"
 
 export async function run(
 	args: string[],
 	cwd = process.cwd(),
-): Promise<{ output: string; exitCode: number }> {
-	let json =
-		args.includes("--format=json") ||
-		args.some((arg, i) => arg === "--format" && args[i + 1] === "json")
+): Promise<{ output: string; exitCode: number; warnings?: CliWarning[] }> {
+	let json = false
+	let warnings: CliWarning[] = []
 	try {
-		const { values, positionals } = parseArgs({
-			args,
-			allowPositionals: true,
-			strict: true,
-			options: {
-				config: { type: "string", short: "c" },
-				offline: { type: "boolean" },
-				format: { type: "string", default: "readable" },
-				help: { type: "boolean", short: "h" },
-			},
-		})
-		json = values.format === "json"
-		if (values.help || positionals.length === 0)
-			return { output: cliHelp(), exitCode: 0 }
-		if (values.format !== "json" && values.format !== "readable")
-			throw new Error(`Unknown report format: ${values.format}`)
-		if (positionals[0] === "schemas") {
-			if (positionals.length !== 2 || positionals[1] !== "pull")
-				throw new Error(
-					"Usage: correctly schemas pull [--config path] [--format readable|json]",
-				)
+		const argv = [process.execPath, "correctly", ...args]
+		const context = interpretArguments(correctlyCli.definition, args)
+		const rawValue = (key: string) =>
+			context.options
+				.filter((option) => option.key === key)
+				.map((option) => option.value)
+				.join(",")
+		json = rawValue("format") === "json"
+		const helpRequested =
+			context.options.some((option) => option.key === "help") &&
+			parseBooleanOption(rawValue("help"))
+		if (!context.error && helpRequested)
+			return {
+				output: help(correctlyCli.definition),
+				exitCode: 0,
+				warnings: context.warnings,
+			}
+		const completion = await completionResponse(correctlyCli.definition, argv)
+		if (completion !== undefined) return { output: completion, exitCode: 0 }
+		const parsed = correctlyCli(argv)
+		warnings = parsed.warnings
+		const { inputs } = parsed
+		if (inputs.case === "")
+			return { output: help(correctlyCli.definition), exitCode: 0, warnings }
+		if (inputs.case === "schemas/pull") {
+			const values = inputs.opts
+			json = values.format === "json"
 			if (values.offline) throw new Error("Schema pull requires online mode")
+			const { discoverConfig, loadProject } = await import("../core/config.ts")
+			const { pullSchemas } = await import("../core/pull.ts")
 			const configPath = values.config
 				? path.resolve(cwd, values.config)
 				: await discoverConfig(cwd)
@@ -46,14 +57,20 @@ export async function run(
 					? JSON.stringify(lock, null, 2)
 					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/`,
 				exitCode: 0,
+				warnings,
 			}
 		}
-		if (positionals[0] !== "check")
-			throw new Error(`Unknown command: ${positionals[0]}`)
+		if (inputs.case !== "check" && inputs.case !== "check/$...files")
+			throw new Error("Expected a check, schemas pull, or completion command")
+		const values = inputs.opts
+		json = values.format === "json"
+		const { check, readableReport } = await import("./check.ts")
 		const sources = new Map<string, string>()
 		const report = await check({
 			cwd,
-			files: positionals.slice(1),
+			...(inputs.case === "check/$...files"
+				? { files: inputs.params.files }
+				: {}),
 			...(values.config ? { config: values.config } : {}),
 			...(values.offline === undefined ? {} : { offline: values.offline }),
 			...(json
@@ -69,6 +86,7 @@ export async function run(
 				? JSON.stringify(report, null, 2)
 				: readableReport(report, { cwd, sources }),
 			exitCode: report.exitCode,
+			warnings,
 		}
 	} catch (error) {
 		const report: Report = {
@@ -86,15 +104,20 @@ export async function run(
 			},
 			exitCode: 2,
 		}
+		const { readableReport } = await import("./check.ts")
 		return {
 			output: json
 				? JSON.stringify(report, null, 2)
 				: readableReport(report, { cwd }),
 			exitCode: 2,
+			warnings,
 		}
 	}
 }
 
 const result = await run(process.argv.slice(2))
-process.stdout.write(`${result.output}\n`)
+logWarnings(result.warnings ?? [])
+process.stdout.write(
+	result.output.endsWith("\n") ? result.output : `${result.output}\n`,
+)
 process.exitCode = result.exitCode
