@@ -31,6 +31,8 @@ export function configurationTypes(dynamic: string): AjvExtension[] {
 
 	// @ts-expect-error Unsupported exact releases require a new package release.
 	schemars({ version: "0.8.23" })
+	// @ts-expect-error The next patch is not reviewed implicitly.
+	schemars({ version: "1.2.4" })
 	// @ts-expect-error Unknown upper bounds cannot extend support implicitly.
 	schemars({ version: ">=0.8.15 <=0.8.23" })
 	// @ts-expect-error Unknown lower bounds cannot extend support implicitly.
@@ -57,6 +59,9 @@ export function configurationTypes(dynamic: string): AjvExtension[] {
 	era.versions.push(unknownEra)
 
 	return [
+		schemars({ version: "1.2.3" }),
+		schemars({ version: ">=1.2.1 <=1.2.3" }),
+		schemars({ version: ">=1.2.2 <=1.2.3" }),
 		schemars({ version: "1.2.2" }),
 		schemars({ version: ">=1.2.1 <=1.2.2" }),
 		schemars({ version: ">=1.0.0 <=1.0.3" }),
