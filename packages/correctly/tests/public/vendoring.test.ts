@@ -357,13 +357,12 @@ test("LSP uses locked schemas and reloads when a pull replaces the lock", async 
 test("vendored filenames reflect retrieval URLs and distinguish filesystem-sensitive names", async () => {
 	const { root } = await remoteProject()
 	expect(vendoredSchemaPath(root, "https://dprint.dev/schemas/v0.json")).toBe(
-		path.join(root, ".correctly/schemas/https--dprint.dev__schemas__v0.json"),
+		path.join(root, ".correctly/schemas/dprint.dev__schemas__v0.json"),
 	)
 	const sources = [
 		"https://example.test/foo/bar.json",
 		"https://example.test/foo__bar.json",
 		"https://example.test/Foo/bar.json",
-		"http://example.test/foo/bar.json",
 		"https://example.test:8443/foo/bar.json",
 		"https://example.test/foo/bar.json?version=1",
 		"https://example.test/foo/bar.json?version=2",
@@ -383,6 +382,9 @@ test("vendored filenames reflect retrieval URLs and distinguish filesystem-sensi
 		expect(path.basename(file)).not.toMatch(/[\\/:*?"<>|]|\.$/)
 	}
 	expect(vendoredSchemaPath(root, `${sources[0]}#/value`)).toBe(files[0])
+	expect(vendoredSchemaPath(root, "http://example.test/foo/bar.json")).toBe(
+		files[0],
+	)
 	expect(() => vendoredSchemaPath(root, "file:///schema.json")).toThrow(
 		"Unsupported retrieval URL",
 	)
@@ -498,4 +500,56 @@ test("concurrent pulls publish a graph whose files agree with its lock", async (
 		diagnostics: [],
 	})
 	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+})
+
+test("HTTP and HTTPS aliases share a filename only when their schema bytes match", async () => {
+	const http = url.replace("https:", "http:")
+	const { root, project } = await setup(
+		{},
+		{
+			files: ["data/**"],
+			associations: [
+				{ files: ["data/http.json"], schema: http },
+				{ files: ["data/https.json"], schema: url },
+			],
+		},
+	)
+	const lock = await pullSchemas(project, {
+		fetch: documents({
+			[http]: { type: "string" },
+			[url]: { type: "string" },
+		}),
+	})
+	const schemaFile = vendoredSchemaPath(root, url)
+	expect(vendoredSchemaPath(root, http)).toBe(schemaFile)
+	expect(await readdir(path.join(root, ".correctly/schemas"))).toEqual([
+		path.basename(schemaFile),
+	])
+	for (const name of ["http", "https"])
+		expect(
+			await new Engine(project, { fetch: noNetwork }).validate(
+				path.join(root, "data/" + name + ".json"),
+				'"valid"',
+			),
+		).toMatchObject({
+			failures: [],
+			diagnostics: [],
+		})
+	const originalLock = await readFile(path.join(root, SCHEMA_LOCK), "utf8")
+	const originalSchema = await readFile(schemaFile, "utf8")
+	await expect(
+		pullSchemas(project, {
+			fetch: documents({
+				[http]: { type: "string" },
+				[url]: { type: "number" },
+			}),
+		}),
+	).rejects.toThrow("different contents")
+	expect(await readFile(path.join(root, SCHEMA_LOCK), "utf8")).toBe(
+		originalLock,
+	)
+	expect(await readFile(schemaFile, "utf8")).toBe(originalSchema)
+	lock.schemas[http]!.digest = schemaDigest('{"type":"number"}')
+	await put(root, SCHEMA_LOCK, lock)
+	await expect(readSchemaLock(root)).rejects.toThrow("different digests")
 })

@@ -170,6 +170,17 @@ async function publishSnapshot(
 	signal?: AbortSignal,
 ): Promise<void> {
 	const directory = path.join(root, ".correctly")
+	const files = new Map<string, { uri: string; text: string }>()
+	for (const [uri, text] of texts) {
+		const filename = path.basename(vendoredSchemaPath(root, uri))
+		const previous = files.get(filename)
+		if (previous && previous.text !== text)
+			throw new CorrectlyError(
+				"schema-lock",
+				`Schemas ${previous.uri} and ${uri} map to ${filename} with different contents; choose one retrieval URL`,
+			)
+		files.set(filename, { uri, text })
+	}
 	await mkdir(directory, { recursive: true })
 	const guardPath = path.join(directory, "pull.lock")
 	const guard = await open(guardPath, "wx").catch((error: unknown) => {
@@ -190,11 +201,8 @@ async function publishSnapshot(
 		const incoming = path.join(stage, "schemas")
 		const previous = path.join(stage, "previous")
 		await mkdir(incoming)
-		for (const [uri, text] of texts)
-			await writeFile(
-				path.join(incoming, path.basename(vendoredSchemaPath(root, uri))),
-				text,
-			)
+		for (const [filename, { text }] of files)
+			await writeFile(path.join(incoming, filename), text)
 		signal?.throwIfAborted()
 		try {
 			await rename(schemas, previous)

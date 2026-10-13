@@ -25,7 +25,7 @@ export function vendoredSchemaPath(root: string, uri: string): string {
 		throw new CorrectlyError("schema-lock", `Unsupported retrieval URL: ${uri}`)
 	url.hash = ""
 	// Escape literal underscores before using double underscores for URL slashes.
-	// Retain the scheme, authority, path and query without filesystem metacharacters.
+	// Retain the authority, path and query without filesystem metacharacters.
 	const source = encodeURIComponent(url.href.slice(url.protocol.length + 2))
 		.replace(/%[0-9A-F]{2}|[A-Z_!'()*~]/g, (token) =>
 			token.startsWith("%")
@@ -34,12 +34,7 @@ export function vendoredSchemaPath(root: string, uri: string): string {
 		)
 		.replaceAll("%2F", "__")
 		.replace(/\.$/, "%2E")
-	return path.join(
-		root,
-		".correctly",
-		"schemas",
-		`${url.protocol.slice(0, -1)}--${source}`,
-	)
+	return path.join(root, ".correctly", "schemas", source)
 }
 function object(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -72,6 +67,7 @@ export async function readSchemaLock(
 			!object(lock.schemas)
 		)
 			throw new Error("Expected lockVersion 1 or 2 and a schemas object")
+		const filenames = new Map<string, string>()
 		for (const [uri, entry] of Object.entries(lock.schemas)) {
 			const url = new URL(uri)
 			if (
@@ -92,6 +88,15 @@ export async function readSchemaLock(
 				)
 			)
 				throw new Error(`Invalid schema entry: ${uri}`)
+			if (lock.lockVersion === 2) {
+				const filename = vendoredSchemaPath(root, uri)
+				const digest = filenames.get(filename)
+				if (digest !== undefined && digest !== entry.digest)
+					throw new Error(
+						`Schemas map to the same filename with different digests: ${filename}`,
+					)
+				filenames.set(filename, entry.digest)
+			}
 		}
 		return lock as SchemaLock
 	} catch (error) {
