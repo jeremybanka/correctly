@@ -43,7 +43,7 @@ export const schemarsEras = Object.freeze([
 	}),
 	Object.freeze({
 		since: "1.2.1",
-		versions: Object.freeze(["1.2.1", "1.2.2"] as const),
+		versions: Object.freeze(["1.2.1", "1.2.2", "1.2.3"] as const),
 	}),
 ] as const satisfies readonly EraDefinition[])
 

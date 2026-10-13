@@ -36,7 +36,7 @@ Some names do not encode enough information to reproduce a Rust type. The `parti
 
 **Numeric precision:** parsing still uses IEEE-754 binary64. Integers above 2⁵³−1 can round before any schema assertion, including 64/128-bit bounds, runs. For example, the valid Rust `u64` value `18446744073709551615` rounds to 2⁶⁴ and fails the upper bound. Smaller in-range integers may round and still pass. This extension does not offer lossless large-integer validation. Store exact large quantities as strings with an appropriate schema when exact decimal digits matter.
 
-## Reviewed eras through 1.2.2
+## Reviewed eras through 1.2.3
 
 | Era    | Reviewed releases | Generated schemas | Contract change                                                                               |
 | ------ | ----------------- | ----------------- | --------------------------------------------------------------------------------------------- |
@@ -46,9 +46,11 @@ Some names do not encode enough information to reproduce a Rust type. The `parti
 | 1.0.4  | 1.0.4–1.0.5       | 82                | Atomic type implementations work on stable Rust again.                                        |
 | 1.1.0  | 1.1.0             | 82                | Flattened unit enums use object variants; optional flattened enums allow absent variants.     |
 | 1.2.0  | 1.2.0             | 83                | Enum-key maps restrict keys; adds smol_str 0.3.                                               |
-| 1.2.1  | 1.2.1–1.2.2       | 83                | Transform attributes run after other constraints; 1.2.2 reproduces this corpus.               |
+| 1.2.1  | 1.2.1–1.2.3       | 83                | Transform attributes run after other constraints; 1.2.2 and 1.2.3 reproduce this corpus.      |
 
-Use `schemars({ version: "1.2.2" })` or `schemars({ version: ">=1.2.1 <=1.2.2" })` for current output. A range such as `>=1.0.0 <=1.2.2` crosses eras and is rejected.
+Use `schemars({ version: "1.2.3" })` or `schemars({ version: ">=1.2.1 <=1.2.3" })` for current output. A range such as `>=1.0.0 <=1.2.3` crosses eras and is rejected.
+
+Schemars 1.2.3 preserves this era's 83-schema contract and format assertions. Its upstream changes reorder internally tagged enum property keys, fix an arbitrary-precision-number panic when converting invalid schema values, and suppress a Rust qualification lint. Object property order does not affect schema validation; the Rust fixes add no emitted types, integrations, or formats. This review does not extend Correctly's JavaScript number precision policy.
 
 The 0.9 and 1.x eras emit **26 distinct formats**. Numeric, IP, UUID, URI, email, date and date-time assertions retain the policies above. These eras remove the built-in phone attribute and its extension assertion, and apply these additional policies:
 
@@ -63,4 +65,4 @@ These are explicit schema-format policies. Zoned date-times check syntax and cal
 
 Every optional integration available in each pinned release is enabled. The later probes replace removed 0.8 integrations with the renamed features and add all seven Jiff date/time/duration types. Schemars 0.9.0–1.0.3 lack stable-Rust atomic implementations, so their inventories omit atomic wrappers; 1.0.4 restores them. The 1.2 inventories include both smol_str 0.2 and 0.3. The corpus also records recursive references, enum-key maps, flattened enums and transform ordering. It is a finite reviewed surface, not a claim about every Rust program or Serde deserialization.
 
-Each reviewed release has its own exact Cargo manifest and lockfile, with every optional integration enabled and the matching derive crate locked. `pnpm test:schemars` runs all nineteen historical generators with `cargo run --locked`, comparing their 1,446 schemas structurally against the seven era corpora; it also checks Renovate's separate candidate probe. Public tests compile the corpus and exercise positive/negative cases for every emitted format in both supported dialects, integer boundaries, nonzero/nested types, association isolation, CLI/LSP agreement, and version/range selection. Rust is a development dependency only. The [maintainer workflow](https://github.com/jeremybanka/correctly/blob/main/packages/schemars/tests/public/fixtures/README.md) documents the required CI review and release steps.
+Each reviewed release has its own exact Cargo manifest and lockfile, with every optional integration enabled and the matching derive crate locked. `pnpm test:schemars` runs all twenty historical generators with `cargo run --locked`, comparing their 1,529 schemas structurally against the seven era corpora; it also checks Renovate's separate candidate probe. Public tests compile the corpus and exercise positive/negative cases for every emitted format in both supported dialects, integer boundaries, nonzero/nested types, association isolation, CLI/LSP agreement, and version/range selection. Rust is a development dependency only. The [maintainer workflow](https://github.com/jeremybanka/correctly/blob/main/packages/schemars/tests/public/fixtures/README.md) documents the required CI review and release steps.

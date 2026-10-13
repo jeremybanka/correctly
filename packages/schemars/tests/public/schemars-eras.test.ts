@@ -13,6 +13,8 @@ test.each([
 	">=1.0.0 <=1.0.3",
 	">=1.0.4 <=1.0.5",
 	">=1.2.1 <=1.2.2",
+	">=1.2.1 <=1.2.3",
+	">=1.2.2 <=1.2.3",
 ])(
 	"%s selects the reviewed assertions through executable configuration",
 	async (version) => {
@@ -41,7 +43,7 @@ test.each([
 test.each([
 	"0.8.14",
 	"0.8.23",
-	"1.2.3",
+	"1.2.4",
 	"^0.8.15",
 	"0.8",
 	"*",
