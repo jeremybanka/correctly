@@ -4,16 +4,8 @@ import path from "node:path"
 import { discoverConfig, loadProject } from "../core/config.ts"
 import { pullSchemas } from "../core/pull.ts"
 import { check, readableReport } from "./check.ts"
+import { cliHelp } from "./help.ts"
 import { failure, type Report } from "../core/types.ts"
-
-const HELP = `correctly check [files...] [--config path] [--offline] [--format readable|json]
-correctly schemas pull [--config path] [--format readable|json]
-correctly-lsp --stdio
-
-Validate JSON, JSONC, YAML and TOML using associations in correctly.config.ts.
-Exit 0: valid; 1: document errors; 2: configuration, schema, or execution errors.
-Formatting does not affect validation. See the package guide for configuration.
-`
 
 export async function run(
 	args: string[],
@@ -36,7 +28,7 @@ export async function run(
 		})
 		json = values.format === "json"
 		if (values.help || positionals.length === 0)
-			return { output: HELP, exitCode: 0 }
+			return { output: cliHelp(), exitCode: 0 }
 		if (values.format !== "json" && values.format !== "readable")
 			throw new Error(`Unknown report format: ${values.format}`)
 		if (positionals[0] === "schemas") {

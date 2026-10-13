@@ -9,6 +9,40 @@ import { put, setup, temp } from "./helpers.ts"
 import type { Report } from "../../src/core/types.ts"
 
 const entry = fileURLToPath(new URL("../../src/cli/main.ts", import.meta.url))
+test("CLI help documents commands and options without loading configuration", async () => {
+	const root = await temp()
+	let output: string | undefined
+	for (const args of [
+		[],
+		["--help"],
+		["-h"],
+		["check", "--help"],
+		["check", "-h"],
+	]) {
+		const result = spawnSync(process.execPath, [entry, ...args], {
+			cwd: root,
+			encoding: "utf8",
+			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+		})
+		expect(result.status).toBe(0)
+		expect(result.stderr).toBe("")
+		output ??= result.stdout
+		expect(result.stdout).toBe(output)
+	}
+	expect(output).toContain("USAGE")
+	expect(output).toMatch(/correctly\s+check\s+<files\.\.\.>/)
+	for (const option of [
+		"-c, --config path",
+		"--offline",
+		"--format readable|json",
+		"-h, --help",
+	])
+		expect(output).toContain(option)
+	expect(output).toContain("default: readable")
+	expect(output).toContain("correctly-lsp --stdio")
+	expect(output).toContain("Exit 0: valid; 1: document errors; 2:")
+})
+
 test("published check command has stable JSON output and exit statuses without filtering", async () => {
 	const { root } = await setup()
 	await put(root, "data/test.json", { name: "valid" })
