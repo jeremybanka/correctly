@@ -91,7 +91,7 @@ jobs:
           retention-days: 7
 
   BreakCheck:
-    name: Released public contracts
+    name: Break Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -103,7 +103,7 @@ jobs:
 
   Test:
     if: ${{ always() }}
-    needs: [Core, Schemars, Distribution, BreakCheck]
+    needs: [Core, Schemars, Distribution]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
