@@ -359,10 +359,10 @@ Microsoft's JSON language service supplies completions and hover for JSON/JSONC.
 
 ### Zed
 
-The Zed extension ships precompiled WASM with the same bundled server and worker as the VSIX. Only the person building it needs Rust and Cargo. Install the `wasm32-wasip2` target for the repository's Rust toolchain and run `pnpm build:zed`:
+The Zed extension ships precompiled WASM with the same bundled server and worker as the VSIX. Only the person building it needs Rust and Cargo. Run `mise install` to install the repository's Rust toolchain, `rustfmt`, and the `wasm32-wasip2` target, then run `pnpm build:zed`:
 
 ```sh
-rustup target add wasm32-wasip2
+mise install
 pnpm build:zed
 ```
 

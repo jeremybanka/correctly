@@ -74,7 +74,6 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run build
       - run: pnpm run build:vsix
-      - run: rustup target add wasm32-wasip2
       - run: pnpm run build:zed
       - run: pnpm test:distribution
       - name: Upload distribution timings

@@ -11,7 +11,7 @@ pnpm build:vsix
 pnpm build:zed
 ```
 
-Builds use the Correctly package version: install `artifacts/Correctly-<version>.vsix` with `code --install-extension`. For Zed, install the `wasm32-wasip2` Rust target before building, then select `artifacts/Correctly-<version>.zed` through **Install Dev Extension**. The Zed archive is shareable; recipients need no Rust toolchain. See the [Zed setup guide](packages/correctly/docs/guide.md#zed). Packages and extensions have not been published.
+Builds use the Correctly package version: install `artifacts/Correctly-<version>.vsix` with `code --install-extension`. For Zed, run `mise install` to install the declared Rust prerequisites before building, then select `artifacts/Correctly-<version>.zed` through **Install Dev Extension**. The Zed archive is shareable; recipients need no Rust toolchain. See the [Zed setup guide](packages/correctly/docs/guide.md#zed). Packages and extensions have not been published.
 
 Try the complete example:
 

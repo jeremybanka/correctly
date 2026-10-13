@@ -5,4 +5,8 @@ _.path = ["{{config_root}}/node_modules/.bin"]
 ni = "30.6.0"
 node = "26.11.1"
 pnpm = "12.11.2"
-rust = "1.99.0"
+
+[tools.rust]
+version = "1.99.0"
+components = ["rustfmt"]
+targets = ["wasm32-wasip2"]

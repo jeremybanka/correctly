@@ -4,10 +4,10 @@ Install Correctly and any imported adapters in the project, add `correctly.confi
 
 ## Build and sideload
 
-From the repository, install the `wasm32-wasip2` target for the Rust toolchain selected by `mise.toml`, then build:
+From the repository, install the toolchain prerequisites declared in `mise.toml`, then build:
 
 ```sh
-rustup target add wasm32-wasip2
+mise install
 pnpm build:zed
 ```
 
