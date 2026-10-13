@@ -289,9 +289,9 @@ Once the lock exists, `SchemaStore` and the built-in Ajv adapter use vendored re
 
 ### Dependency update automation
 
-Run pull after installing updated dependencies, and include the `.correctly/` diff in the dependency update review. A structurally valid upstream regression can still be pulled; run `correctly check --offline` against your documents before accepting it. Correctly cannot recover an upstream version that was never saved.
+Run pull after installing updated dependencies, and include the `.correctly/` diff in the dependency update review. Document validation belongs in CI: a structurally valid upstream regression should produce an upgrade PR whose CI fails, preserving the updated dependencies and schema snapshots as a baseline to investigate or repair. Correctly cannot recover an upstream version that was never saved.
 
-[Renovate post-upgrade tasks](https://docs.renovatebot.com/configuration-options/#postupgradetasks) can install the new dependencies, pull schemas and check documents before making the update commit. The Renovate administrator must allow these commands via the global `allowedCommands` setting; hosted support depends on the service's configuration. For an installation using pnpm:
+[Renovate post-upgrade tasks](https://docs.renovatebot.com/configuration-options/#postupgradetasks) can install the new dependencies and pull schemas before making the update commit. The Renovate administrator must allow these commands via the global `allowedCommands` setting; hosted support depends on the service's configuration. For an installation using pnpm:
 
 ```json
 {
@@ -300,8 +300,7 @@ Run pull after installing updated dependencies, and include the `.correctly/` di
 		"postUpgradeTasks": {
 			"commands": [
 				"pnpm install --frozen-lockfile --ignore-scripts",
-				"pnpm exec correctly schemas pull",
-				"pnpm exec correctly check --offline"
+				"pnpm exec correctly schemas pull"
 			],
 			"fileFilters": [".correctly/**"],
 			"executionMode": "branch"
@@ -311,6 +310,14 @@ Run pull after installing updated dependencies, and include the `.correctly/` di
 ```
 
 The package rule triggers on the associated dependency; pull refreshes all configured schema graphs. Where post-upgrade commands are unavailable, run those same steps in your dependency-update workflow and include the generated files in its pull request. `correctly schemas pull --format json` emits the complete resulting lock for automation. Pull requires online mode and returns exit 2 on failure.
+
+Run document validation in CI on the resulting upgrade PR:
+
+```sh
+pnpm exec correctly check --offline
+```
+
+This lets Renovate create the upgrade PR even when its new schemas reject existing documents. CI reports the failures on that PR, where the dependency, schema, and document changes can be investigated together.
 
 ## CLI and report contract
 
