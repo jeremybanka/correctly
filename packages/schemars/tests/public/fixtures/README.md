@@ -16,6 +16,8 @@ The [1.2.2–1.2.3 source audit](https://github.com/GREsau/schemars/compare/v1.2
 
 The Schemars compatibility job passes the PR base SHA as `SCHEMARS_BASE_REF`. It caches Cargo's target directory with debug information and incremental compilation disabled; toolchain and generator inputs determine the cache key. Every run still executes and compares every pinned generator. Successful runs write per-generator timings to `artifacts/schemars/generation-timings.json`, uploaded alongside JavaScript test timings for seven days. Each modern era has a separate Vitest entry point so workers can execute eras concurrently; `pnpm check:tests` requires an entry point for every modern era.
 
+Released public-contract replay restores `packages/schemars/src/eras.ts` with the released tests for both packages. The catalog is the reviewed-version input to that historical contract: an old test's unreviewed release must remain absent during replay even after a current review adds it. The current era-selection logic and format assertions still run against this historical input. The ordinary test job exercises the expanded current catalog, and the Schemars gate separately requires every historical catalog entry, generator, and corpus to remain intact.
+
 The gate loads the reviewed catalog and corpora from that Git revision, regenerates the candidate, and writes its output to `artifacts/schemars/<version>.json`. On the initial dependency-only PR it exits nonzero with one of:
 
 - `SCHEMARS_ERA_EXTENSION_REQUIRED`: the schemas are identical; explicitly extend the existing era to include the candidate.
