@@ -1,5 +1,12 @@
 # correctly
 
+## 0.1.3
+
+### Patch Changes
+
+- cede0c4: Accept valid JSON Schemas with overlapping named and pattern properties while enforcing both sets of constraints.
+- cede0c4: Add schema vendoring with correctly schemas pull, integrity-checked project snapshots, discovery and installed-package provenance, and shared CLI/editor locking.
+
 ## 0.1.2
 
 ### Patch Changes
