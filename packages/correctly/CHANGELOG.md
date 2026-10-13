@@ -1,5 +1,12 @@
 # correctly
 
+## 0.2.0
+
+### Minor Changes
+
+- ff3fa15: Use Comline with Zod-backed options for CLI parsing, help, warnings, and shell completions; unknown options now warn on stderr, booleans accept explicit values, and repeated option values follow Comline's comma-joining semantics.
+- 275773c: Move schema locks to correctly.lock and store schemas under stable URL-derived filenames, retaining legacy snapshot validation and migration support; restore both the lock and schemas when rolling back.
+
 ## 0.1.4
 
 ### Patch Changes
