@@ -9,13 +9,14 @@ const entry = fileURLToPath(new URL("../../src/cli/main.ts", import.meta.url))
 test("CLI completion shares command routes, option choices, and filesystem hints with parsing", async () => {
 	const commands = await correctlyCli.complete({ words: [""] })
 	expect(commands.candidates.map(({ value }) => value)).toEqual(
-		expect.arrayContaining(["check", "completion"]),
+		expect.arrayContaining(["check", "schemas", "completion"]),
 	)
 	expect(commands.diagnostics).toEqual([])
 	for (const words of [
 		["check", "--format", "j"],
 		["--format=j"],
 		["check", "data.json", "--format=j"],
+		["schemas", "pull", "--format=j"],
 	]) {
 		const result = await correctlyCli.complete({ words })
 		expect(result.candidates.map(({ value }) => value)).toEqual(["json"])
@@ -29,6 +30,7 @@ test("CLI completion shares command routes, option choices, and filesystem hints
 	expect(inline.replacement).toEqual({ word: 1, start: 9, end: 13 })
 	for (const words of [
 		["check", "--config", ""],
+		["schemas", "pull", "--config", ""],
 		["check", ""],
 		["check", "data.json", ""],
 		["check", "--", "-file"],
@@ -47,6 +49,12 @@ test("CLI completion shares command routes, option choices, and filesystem hints
 		words: ["check", "--", "--"],
 	})
 	expect(afterDelimiter.candidates).toEqual([])
+	const schemas = await correctlyCli.complete({ words: ["schemas", ""] })
+	expect(schemas.candidates.map(({ value }) => value)).toContain("pull")
+	expect(
+		(await correctlyCli.complete({ words: ["schemas", "pull", ""] }))
+			.fileSystem,
+	).toBe("none")
 	for (const words of [
 		["completion", ""],
 		["completion", "install", ""],

@@ -97,7 +97,11 @@ const definition: Definition = {
 		check: checkOptions,
 		"check/$...files": checkOptions,
 		schemas: { ...checkOptions, description: "Manage vendored schemas." },
-		"schemas/pull": { ...checkOptions, description: "Vendor configured schemas and their references (requires online mode)." },
+		"schemas/pull": {
+			...checkOptions,
+			description:
+				"Vendor configured schemas and their references (requires online mode).",
+		},
 		completion: helpOption("Print a completion setup artifact."),
 		"completion/$target": helpOption("Print a completion setup artifact."),
 		"completion/install": helpOption(

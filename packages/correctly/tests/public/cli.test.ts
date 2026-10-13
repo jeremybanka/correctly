@@ -23,6 +23,8 @@ test("CLI help documents commands and options without loading configuration", as
 		["-h"],
 		["check", "--help"],
 		["check", "-h"],
+		["schemas", "--help"],
+		["schemas", "pull", "--help"],
 		["check", "--config", "missing.ts", "--format", "invalid", "--help"],
 		["completion", "--help"],
 		["completion", "install", "--help"],
@@ -48,6 +50,7 @@ test("CLI help documents commands and options without loading configuration", as
 		expect(output).toContain(option)
 	expect(output).toContain("default: readable")
 	expect(output).toContain("correctly-lsp --stdio")
+	expect(output).toContain("schemas pull")
 	expect(output).toContain("completion install <target>")
 	expect(output).toContain("Exit 0: valid; 1: document errors; 2:")
 })
