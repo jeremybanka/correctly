@@ -132,6 +132,8 @@ async function compile(
 			strictTypes: false,
 			strictTuples: false,
 			strictRequired: false,
+			// JSON Schema applies both schemas when properties and patterns overlap.
+			allowMatchingProperties: true,
 			coerceTypes: false,
 			useDefaults: false,
 			removeAdditional: false,

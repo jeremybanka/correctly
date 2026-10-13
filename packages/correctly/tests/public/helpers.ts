@@ -32,6 +32,7 @@ export type TestConfig = {
 	associations: {
 		name?: string
 		files: string[]
+		packages?: string[]
 		schema: string | null
 		mode?: "json" | "jsonc" | "yaml" | "toml"
 		extensions?: string[]

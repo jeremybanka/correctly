@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util"
+import path from "node:path"
+import { discoverConfig, loadProject } from "../core/config.ts"
+import { pullSchemas } from "../core/pull.ts"
 import { check, readableReport } from "./check.ts"
 import { failure, type Report } from "../core/types.ts"
 
 const HELP = `correctly check [files...] [--config path] [--offline] [--format readable|json]
+correctly schemas pull [--config path] [--format readable|json]
 correctly-lsp --stdio
 
 Validate JSON, JSONC, YAML and TOML using associations in correctly.config.ts.
@@ -33,10 +37,27 @@ export async function run(
 		json = values.format === "json"
 		if (values.help || positionals.length === 0)
 			return { output: HELP, exitCode: 0 }
-		if (positionals[0] !== "check")
-			throw new Error(`Unknown command: ${positionals[0]}`)
 		if (values.format !== "json" && values.format !== "readable")
 			throw new Error(`Unknown report format: ${values.format}`)
+		if (positionals[0] === "schemas") {
+			if (positionals.length !== 2 || positionals[1] !== "pull")
+				throw new Error(
+					"Usage: correctly schemas pull [--config path] [--format readable|json]",
+				)
+			if (values.offline) throw new Error("Schema pull requires online mode")
+			const configPath = values.config
+				? path.resolve(cwd, values.config)
+				: await discoverConfig(cwd)
+			const lock = await pullSchemas(await loadProject(configPath))
+			return {
+				output: json
+					? JSON.stringify(lock, null, 2)
+					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/`,
+				exitCode: 0,
+			}
+		}
+		if (positionals[0] !== "check")
+			throw new Error(`Unknown command: ${positionals[0]}`)
 		const sources = new Map<string, string>()
 		const report = await check({
 			cwd,

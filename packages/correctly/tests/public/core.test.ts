@@ -451,3 +451,27 @@ describe("schemas and references", () => {
 		})
 	})
 })
+
+test("overlapping named and pattern properties enforce both constraints", async () => {
+	const { engine, file } = await setup({
+		type: "object",
+		properties: { name: { type: "string", minLength: 3 } },
+		patternProperties: { "^n": { type: "string", pattern: "^[a-z]+$" } },
+		additionalProperties: false,
+	})
+	expect(await engine.validate(file, '{"name":"valid"}')).toMatchObject({
+		failures: [],
+		diagnostics: [],
+	})
+	for (const [value, code] of [
+		["ab", "schema/minLength"],
+		["BAD", "schema/pattern"],
+	]) {
+		expect(
+			await engine.validate(file, JSON.stringify({ name: value })),
+		).toMatchObject({
+			failures: [],
+			diagnostics: [{ code, pointer: "/name" }],
+		})
+	}
+})

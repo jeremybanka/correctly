@@ -1,0 +1,177 @@
+import { randomUUID } from "node:crypto"
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { createRequire } from "node:module"
+import path from "node:path"
+import type { SchemaObject } from "ajv"
+import { schemaUri, type Project } from "./config.ts"
+import { Engine } from "./engine.ts"
+import {
+	SchemaStore,
+	type SchemaResource,
+	type StoreOptions,
+} from "./schemas.ts"
+import { schemaChildren } from "./schema-walk.ts"
+import {
+	readSchemaLock,
+	SCHEMA_LOCK,
+	schemaDigest,
+	vendoredSchemaPath,
+	type SchemaLock,
+} from "./schema-lock.ts"
+import { CorrectlyError } from "./types.ts"
+
+async function packageVersion(project: Project, name: string): Promise<string> {
+	const require = createRequire(project.configPath)
+	for (const directory of require.resolve.paths(name) ?? []) {
+		try {
+			const manifest: unknown = JSON.parse(
+				await readFile(path.join(directory, name, "package.json"), "utf8"),
+			)
+			if (
+				typeof manifest !== "object" ||
+				manifest === null ||
+				!("version" in manifest) ||
+				typeof manifest.version !== "string" ||
+				!manifest.version
+			)
+				throw new Error("Package manifest has no version")
+			return manifest.version
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") continue
+			throw new CorrectlyError(
+				"schema-packages",
+				`Cannot read installed version of ${name}: ${String(error)}`,
+			)
+		}
+	}
+	throw new CorrectlyError(
+		"schema-packages",
+		`Package ${name} is not installed from ${project.root}; install dependencies before pulling schemas`,
+	)
+}
+
+/** Download and validate the complete schema graph before publishing a new lock. */
+export async function pullSchemas(
+	project: Project,
+	options: Pick<StoreOptions, "fetch" | "signal"> = {},
+): Promise<SchemaLock> {
+	if (project.config.remote?.offline)
+		throw new CorrectlyError(
+			"schema-load",
+			"Schema pull requires online mode; remote.offline is enabled",
+		)
+	const previous = await readSchemaLock(project.root)
+	const texts = new Map<string, string>()
+	const store = new SchemaStore(project, {
+		...options,
+		pull: true,
+		onRemote: (uri, text) => {
+			texts.set(uri, text)
+		},
+	})
+	const roots: {
+		resource: SchemaResource
+		packages: Record<string, string>
+	}[] = []
+	// Register all roots first, so references to another association's $id remain local.
+	for (const rule of project.config.associations) {
+		if (!rule.validate?.schema) continue
+		const packages: Record<string, string> = {}
+		for (const name of [...new Set(rule.packages ?? [])].sort())
+			packages[name] = await packageVersion(project, name)
+		roots.push({
+			resource: await store.load(schemaUri(rule.validate.schema, project.root)),
+			packages,
+		})
+	}
+	const provenance = new Map<string, Record<string, string>>()
+	for (const root of roots) {
+		const visited = new Set<SchemaResource["schema"]>()
+		async function resource(current: SchemaResource): Promise<void> {
+			if (texts.has(current.uri)) {
+				const packages = provenance.get(current.uri) ?? {}
+				Object.assign(packages, root.packages)
+				provenance.set(current.uri, packages)
+			}
+			if (visited.has(current.schema)) return
+			visited.add(current.schema)
+			await walk(current.schema, current.uri, current)
+		}
+		async function walk(
+			value: unknown,
+			base: string,
+			current: SchemaResource,
+		): Promise<void> {
+			if (typeof value !== "object" || value === null || Array.isArray(value))
+				return
+			const schema = value as SchemaObject
+			const scope = typeof schema.$id === "string" ? schema.$id : base
+			for (const keyword of ["$ref", "$dynamicRef"]) {
+				const ref: unknown = schema[keyword]
+				if (ref === undefined) continue
+				if (typeof ref !== "string")
+					throw new CorrectlyError(
+						"schema",
+						`${keyword} must be a string: ${base}`,
+					)
+				const url = new URL(ref, scope)
+				const known = store.resources.get(url.href)
+				url.hash = ""
+				const target = known ?? (await store.load(url.href, current.dialect))
+				await resource(target)
+			}
+			for (const [, child] of schemaChildren(schema))
+				await walk(child, scope, current)
+		}
+		await resource(root.resource)
+	}
+	const engine = new Engine(project, options)
+	// The Ajv adapter's versioned, project-local service uses the captured graph.
+	engine.context.services.set(Symbol.for("correctly/ajv/schema-store@1"), store)
+	try {
+		await engine.prepare()
+	} finally {
+		await engine.dispose()
+	}
+	const lock: SchemaLock = { lockVersion: 1, schemas: {} }
+	const discoveredAt = new Date().toISOString()
+	for (const [uri, text] of [...texts].sort(([a], [b]) => a.localeCompare(b))) {
+		const digest = schemaDigest(text)
+		const packages = Object.fromEntries(
+			Object.entries(provenance.get(uri) ?? {}).sort(([a], [b]) =>
+				a.localeCompare(b),
+			),
+		)
+		const old = previous?.schemas[uri]
+		lock.schemas[uri] =
+			old?.digest === digest &&
+			JSON.stringify(old.packages) === JSON.stringify(packages)
+				? old
+				: { digest, discoveredAt, packages }
+	}
+	options.signal?.throwIfAborted()
+	await mkdir(path.join(project.root, ".correctly", "schemas"), {
+		recursive: true,
+	})
+	for (const [uri, text] of texts) {
+		const file = vendoredSchemaPath(project.root, lock.schemas[uri]!.digest)
+		await atomicWrite(file, text)
+	}
+	// Content-addressed files remain usable by the old lock until this rename succeeds.
+	options.signal?.throwIfAborted()
+	await atomicWrite(
+		path.join(project.root, SCHEMA_LOCK),
+		`${JSON.stringify(lock, null, 2)}\n`,
+	)
+	return lock
+}
+
+async function atomicWrite(file: string, text: string): Promise<void> {
+	const temporary = `${file}.${randomUUID()}.tmp`
+	try {
+		await writeFile(temporary, text)
+		await rename(temporary, file)
+	} finally {
+		await rm(temporary, { force: true })
+	}
+}

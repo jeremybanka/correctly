@@ -1,12 +1,18 @@
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import type { AnySchema, SchemaObject } from "ajv"
 import { parseDocument } from "./parse.ts"
 import { readText, type Project, type ReadText } from "./config.ts"
 import { CorrectlyError } from "./types.ts"
 import { schemaChildren } from "./schema-walk.ts"
+import {
+	readSchemaLock,
+	schemaDigest,
+	vendoredSchemaPath,
+	type SchemaLock,
+} from "./schema-lock.ts"
 
 export type Dialect = "draft7" | "2020-12"
 export const DIALECTS = {
@@ -62,6 +68,9 @@ export type StoreOptions = {
 	read?: ReadText
 	fetch?: typeof fetch
 	signal?: AbortSignal
+	/** Fetch a fresh snapshot, bypassing both the project lock and HTTP cache. */
+	pull?: boolean
+	onRemote?: (uri: string, text: string) => void
 }
 
 export class SchemaStore {
@@ -76,6 +85,8 @@ export class SchemaStore {
 	private readonly read: ReadText
 	private readonly request: typeof fetch
 	private requests = 0
+	private readonly root: string
+	private lock: Promise<SchemaLock | undefined> | undefined
 	constructor(
 		project: Pick<Project, "root"> & {
 			config: Pick<Project["config"], "remote">
@@ -83,6 +94,7 @@ export class SchemaStore {
 		options: StoreOptions = {},
 	) {
 		this.options = options
+		this.root = project.root
 		const remote = project.config.remote
 		this.cacheDir = path.resolve(
 			project.root,
@@ -244,27 +256,58 @@ export class SchemaStore {
 	}
 
 	private async remote(uri: string): Promise<string> {
+		if (!this.options.pull) {
+			const lock = await (this.lock ??= readSchemaLock(this.root, this.read))
+			if (lock) {
+				const entry = Object.hasOwn(lock.schemas, uri)
+					? lock.schemas[uri]
+					: undefined
+				if (!entry)
+					throw new CorrectlyError(
+						"schema-lock",
+						`Schema is not locked: ${uri}; run correctly schemas pull`,
+					)
+				const file = vendoredSchemaPath(this.root, entry.digest)
+				let text: string
+				try {
+					text = await this.read(pathToFileURL(file).href)
+				} catch (error) {
+					throw new CorrectlyError(
+						"schema-lock",
+						`Cannot read vendored schema ${file}: ${String(error)}`,
+					)
+				}
+				if (schemaDigest(text) !== entry.digest)
+					throw new CorrectlyError(
+						"schema-integrity",
+						`Digest mismatch for vendored schema ${uri}: ${file}`,
+					)
+				return text
+			}
+		}
 		const cacheFile = path.join(
 			this.cacheDir,
 			`${createHash("sha256").update(uri).digest("hex")}.json`,
 		)
 		let cached: CacheEntry | undefined
-		try {
-			const raw = await readFile(cacheFile, "utf8")
-			const entry: unknown = JSON.parse(raw)
-			if (
-				!isObject(entry) ||
-				entry.uri !== uri ||
-				typeof entry.text !== "string"
-			)
-				throw new Error("invalid cache entry")
-			cached = entry as CacheEntry
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "ENOENT")
-				throw new CorrectlyError(
-					"schema-cache",
-					`Cannot read schema cache ${cacheFile}: ${String(error)}`,
+		if (!this.options.pull) {
+			try {
+				const raw = await readFile(cacheFile, "utf8")
+				const entry: unknown = JSON.parse(raw)
+				if (
+					!isObject(entry) ||
+					entry.uri !== uri ||
+					typeof entry.text !== "string"
 				)
+					throw new Error("invalid cache entry")
+				cached = entry as CacheEntry
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+					throw new CorrectlyError(
+						"schema-cache",
+						`Cannot read schema cache ${cacheFile}: ${String(error)}`,
+					)
+			}
 		}
 		if (this.offline) {
 			if (!cached)
@@ -334,6 +377,8 @@ export class SchemaStore {
 				await reader.cancel()
 			}
 			const text = Buffer.concat(chunks).toString("utf8")
+			this.options.onRemote?.(uri, text)
+			if (this.options.pull) return text
 			const entry: CacheEntry = { uri, text }
 			const etag = response.headers.get("etag")
 			const lastModified = response.headers.get("last-modified")
