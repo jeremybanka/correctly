@@ -1,5 +1,13 @@
 # @correctlyjs/schemars
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [c4c1754]
+- Updated dependencies [c4c1754]
+  - correctly@0.3.0
+
 ## 0.0.4
 
 ### Patch Changes
