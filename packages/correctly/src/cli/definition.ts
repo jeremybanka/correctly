@@ -58,6 +58,35 @@ const checkOptions = options<CheckOptions>(
 	},
 )
 
+const pullOptionsSchema = checkOptionsSchema.extend({
+	association: z.string().min(1).optional(),
+	all: z.boolean().optional(),
+})
+type PullOptions = z.infer<typeof pullOptionsSchema>
+const pullOptions = options<PullOptions>(
+	"Vendor configured schemas and their references (requires online mode).",
+	pullOptionsSchema,
+	{
+		...checkOptions.optionConfigs,
+		association: {
+			example: "--association name",
+			description:
+				"Refresh only this exact association name; repeat to select multiple names.",
+			parse: parseStringOption,
+			required: false,
+			completion: { repeatable: true },
+		},
+		all: {
+			example: "--all",
+			description:
+				"Refresh every configured schema (also the default without selectors).",
+			parse: parseBooleanOption,
+			required: false,
+			completion: { repeatable: false },
+		},
+	},
+)
+
 const routes = optional({
 	check: optional({ "$...files": null }),
 	schemas: optional({ pull: null }),
@@ -76,7 +105,7 @@ type Definition = Pick<
 		check: OptionsGroup<CheckOptions>
 		"check/$...files": OptionsGroup<CheckOptions>
 		schemas: OptionsGroup<CheckOptions>
-		"schemas/pull": OptionsGroup<CheckOptions>
+		"schemas/pull": OptionsGroup<PullOptions>
 		completion: ReturnType<typeof helpOption>
 		"completion/$target": ReturnType<typeof helpOption>
 		"completion/install": ReturnType<typeof helpOption>
@@ -97,11 +126,7 @@ const definition: Definition = {
 		check: checkOptions,
 		"check/$...files": checkOptions,
 		schemas: { ...checkOptions, description: "Manage vendored schemas." },
-		"schemas/pull": {
-			...checkOptions,
-			description:
-				"Vendor configured schemas and their references (requires online mode).",
-		},
+		"schemas/pull": pullOptions,
 		completion: helpOption("Print a completion setup artifact."),
 		"completion/$target": helpOption("Print a completion setup artifact."),
 		"completion/install": helpOption(

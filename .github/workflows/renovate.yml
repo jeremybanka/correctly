@@ -45,6 +45,8 @@ jobs:
           RENOVATE_ALLOWED_COMMANDS: >-
             ["^pnpm dlx --package=vite-plus@[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)? vp migrate --no-interactive$",
             "^pnpm install --no-frozen-lockfile --ignore-scripts$",
+            "^pnpm install --frozen-lockfile --ignore-scripts$",
+            "^node packages/correctly/src/cli/main\\.ts schemas pull --association (?:TypeScript|dprint|Renovate)$",
             "^pnpm exec dprint fmt$"]
           RENOVATE_REPOSITORIES: ${{ github.repository_owner }}/${{ github.event.repository.name }}
         with:
