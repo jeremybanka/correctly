@@ -1,5 +1,15 @@
 # correctly
 
+## 0.3.0
+
+### Minor Changes
+
+- c4c1754: Write schema locks to `.correctly/correctly.lock` alongside vendored schemas, continuing to read root `correctly.lock` and legacy `.correctly/lock.json` snapshots and migrating them on the next successful pull without changing preserved discovery metadata; include `.correctly/**` in Renovate `postUpgradeTasks.fileFilters`.
+
+### Patch Changes
+
+- c4c1754: Add repeatable `schemas pull --association name` selectors and an explicit `--all` option, preserving unselected schema bytes and provenance, pinning shared references until their owners are selected together, and rejecting stale concurrent updates; use dependency-specific Renovate `packageRules` to refresh only the upgrade's related schemas, with document validation remaining in CI.
+
 ## 0.2.0
 
 ### Minor Changes
