@@ -17,6 +17,7 @@ import { pullSchemas } from "../../src/core/pull.ts"
 import {
 	readSchemaLock,
 	SCHEMA_LOCK,
+	PREVIOUS_SCHEMA_LOCK,
 	LEGACY_SCHEMA_LOCK,
 	schemaDigest,
 	vendoredSchemaPath,
@@ -28,6 +29,274 @@ const url = "https://schemas.example.test/root.json"
 const noNetwork: typeof fetch = async () => {
 	throw new Error("Unexpected network request")
 }
+
+test("selective pulls refresh local roots' remote graphs and preserve unrelated snapshots and provenance", async () => {
+	const other = "https://schemas.example.test/renovate.json"
+	const child = "https://schemas.example.test/child.json"
+	const unused = "https://schemas.example.test/unused.json"
+	const added = "https://schemas.example.test/added.json"
+	const { project, root } = await setup(
+		{},
+		{
+			files: ["data/**"],
+			associations: [
+				{
+					name: "Tool",
+					files: ["data/tool.json"],
+					schema: "schema.json",
+					packages: ["tool"],
+				},
+				{
+					name: "Renovate",
+					files: ["data/renovate.json"],
+					schema: other,
+					packages: ["renovate"],
+				},
+			],
+		},
+	)
+	await put(root, "schema.json", {
+		$ref: child,
+		$defs: { unused: { $ref: unused } },
+	})
+	await put(root, "node_modules/tool/package.json", { version: "1.0.0" })
+	await put(root, "node_modules/renovate/package.json", { version: "1.0.0" })
+	const first = await pullSchemas(project, {
+		fetch: documents({
+			[child]: { type: "string" },
+			[unused]: true,
+			[other]: { type: "string" },
+		}),
+	})
+	first.schemas[other]!.discoveredAt = "2020-01-01T00:00:00.000Z"
+	await put(root, SCHEMA_LOCK, first)
+	const oldBytes = await readFile(vendoredSchemaPath(root, other), "utf8")
+	await put(root, "node_modules/tool/package.json", { version: "2.0.0" })
+	await rm(path.join(root, "node_modules/renovate"), { recursive: true })
+	await put(root, "schema.json", {
+		$ref: child,
+		$defs: { added: { $ref: added } },
+	})
+	const requested: string[] = []
+	const next = await pullSchemas(project, {
+		associations: ["Tool"],
+		fetch: documents(
+			{
+				[child]: { type: "number" },
+				[added]: true,
+				[other]: { type: "invalid-type" },
+			},
+			requested,
+		),
+	})
+	expect(requested.sort()).toEqual([child, added].sort())
+	expect(next.schemas[other]).toEqual(first.schemas[other])
+	expect(await readFile(vendoredSchemaPath(root, other), "utf8")).toBe(oldBytes)
+	expect(next.schemas[unused]).toEqual(first.schemas[unused])
+	expect(next.schemas[child]!.packages).toEqual({ tool: "2.0.0" })
+	expect(next.schemas[added]!.packages).toEqual({ tool: "2.0.0" })
+	await put(root, "data/tool.json", '"now invalid"')
+	await put(root, "data/renovate.json", '"still valid"')
+	const report = await check({ cwd: root, offline: true })
+	expect(report.exitCode).toBe(1)
+	expect(
+		report.files.find((file) => file.file.endsWith("renovate.json"))
+			?.diagnostics,
+	).toEqual([])
+	await put(root, "node_modules/renovate/package.json", { version: "1.0.0" })
+	const full = await pullSchemas(project, {
+		fetch: documents({
+			[child]: { type: "number" },
+			[added]: true,
+			[other]: { type: "string" },
+		}),
+	})
+	expect(full.schemas[unused]).toBeUndefined()
+})
+
+test("shared references stay pinned until all owning associations are selected together", async () => {
+	const other = "https://schemas.example.test/other.json"
+	const shared = "https://schemas.example.test/shared.json"
+	const { project, root } = await setup(
+		{},
+		{
+			files: ["data/**"],
+			associations: [
+				{
+					name: "One",
+					files: ["data/one.json"],
+					schema: url,
+					packages: ["one"],
+				},
+				{
+					name: "Two",
+					files: ["data/two.json"],
+					schema: other,
+					packages: ["two"],
+				},
+			],
+		},
+	)
+	await put(root, "node_modules/one/package.json", { version: "1.0.0" })
+	await put(root, "node_modules/two/package.json", { version: "1.0.0" })
+	const roots = { [url]: { $ref: shared }, [other]: { $ref: shared } }
+	const first = await pullSchemas(project, {
+		fetch: documents({ ...roots, [shared]: { type: "string" } }),
+	})
+	await put(root, "node_modules/one/package.json", { version: "2.0.0" })
+	const requested: string[] = []
+	const partial = await pullSchemas(project, {
+		associations: ["One"],
+		fetch: documents(roots, requested),
+	})
+	expect(requested).toEqual([url])
+	expect(partial.schemas[shared]).toEqual(first.schemas[shared])
+	expect(partial.schemas[other]).toEqual(first.schemas[other])
+	expect(partial.schemas[url]!.packages).toEqual({ one: "2.0.0" })
+	requested.length = 0
+	const together = await pullSchemas(project, {
+		associations: ["One", "Two"],
+		fetch: documents({ ...roots, [shared]: { type: "number" } }, requested),
+	})
+	expect(requested.sort()).toEqual([url, other, shared].sort())
+	expect(together.schemas[shared]!.packages).toEqual({
+		one: "2.0.0",
+		two: "1.0.0",
+	})
+})
+
+test("selective pulls retain cross-association identifiers without fetching their identifier URLs", async () => {
+	const other = "https://schemas.example.test/other.json"
+	const id = "https://identifiers.example.test/other"
+	const { project } = await setup(
+		{},
+		{
+			associations: [
+				{ name: "One", files: ["data/one.json"], schema: url },
+				{ name: "Two", files: ["data/two.json"], schema: other },
+			],
+		},
+	)
+	const first = await pullSchemas(project, {
+		fetch: documents({
+			[url]: { $ref: id },
+			[other]: { $id: id, type: "string" },
+		}),
+	})
+	const requested: string[] = []
+	const next = await pullSchemas(project, {
+		associations: ["One"],
+		fetch: documents({ [url]: { $ref: id } }, requested),
+	})
+	expect(requested).toEqual([url])
+	expect(next).toEqual(first)
+})
+
+test("selectors reject unknown names, empty selections and uninitialized snapshots before fetching", async () => {
+	const { project, root } = await remoteProject()
+	project.config.associations[0]!.name = "Tool"
+	for (const associations of [["Typo"], [], ["Tool"]])
+		await expect(
+			pullSchemas(project, { associations, fetch: noNetwork }),
+		).rejects.toThrow()
+	expect(await readSchemaLock(root)).toBeUndefined()
+})
+
+test("selective pulls migrate a root lock and preserve unrelated observation metadata", async () => {
+	const other = "https://schemas.example.test/other.json"
+	const { project, root, file } = await setup(
+		{},
+		{
+			associations: [
+				{ name: "One", files: ["data/test.json"], schema: url },
+				{ name: "Two", files: ["data/two.json"], schema: other },
+			],
+		},
+	)
+	const first = await pullSchemas(project, {
+		fetch: documents({ [url]: { type: "string" }, [other]: true }),
+	})
+	await put(root, PREVIOUS_SCHEMA_LOCK, first)
+	await rm(path.join(root, SCHEMA_LOCK))
+	expect(await readSchemaLock(root)).toEqual(first)
+	expect(
+		(await new Engine(project, { fetch: noNetwork }).validate(file, '"valid"'))
+			.diagnostics,
+	).toEqual([])
+	const next = await pullSchemas(project, {
+		associations: ["One"],
+		fetch: documents({ [url]: { type: "number" } }),
+	})
+	expect(next.schemas[other]).toEqual(first.schemas[other])
+	expect(await readFile(path.join(root, SCHEMA_LOCK), "utf8")).toBe(
+		`${JSON.stringify(next, null, 2)}\n`,
+	)
+	await expect(
+		readFile(path.join(root, PREVIOUS_SCHEMA_LOCK)),
+	).rejects.toMatchObject({ code: "ENOENT" })
+	await put(root, PREVIOUS_SCHEMA_LOCK, first)
+	await put(root, SCHEMA_LOCK, "{")
+	await expect(readSchemaLock(root)).rejects.toThrow("Invalid")
+})
+
+test("selective pulls refuse corrupted preserved schemas without changing the lock", async () => {
+	const other = "https://schemas.example.test/other.json"
+	const { project, root } = await setup(
+		{},
+		{
+			associations: [
+				{ name: "One", files: ["data/one.json"], schema: url },
+				{ name: "Two", files: ["data/two.json"], schema: other },
+			],
+		},
+	)
+	await pullSchemas(project, {
+		fetch: documents({ [url]: true, [other]: true }),
+	})
+	const lock = await readFile(path.join(root, SCHEMA_LOCK), "utf8")
+	await put(root, path.relative(root, vendoredSchemaPath(root, other)), "false")
+	await expect(
+		pullSchemas(project, { associations: ["One"], fetch: noNetwork }),
+	).rejects.toThrow("Digest mismatch")
+	expect(await readFile(path.join(root, SCHEMA_LOCK), "utf8")).toBe(lock)
+})
+
+test("a stale selective pull cannot overwrite another association's completed update", async () => {
+	const other = "https://schemas.example.test/other.json"
+	const { project, root } = await setup(
+		{},
+		{
+			associations: [
+				{ name: "One", files: ["data/one.json"], schema: url },
+				{ name: "Two", files: ["data/two.json"], schema: other },
+			],
+		},
+	)
+	await pullSchemas(project, {
+		fetch: documents({
+			[url]: { type: "string" },
+			[other]: { type: "string" },
+		}),
+	})
+	await expect(
+		pullSchemas(project, {
+			associations: ["One"],
+			fetch: async () => {
+				await pullSchemas(project, {
+					associations: ["Two"],
+					fetch: documents({ [other]: { type: "number" } }),
+				})
+				return new Response('{"type":"number"}')
+			},
+		}),
+	).rejects.toThrow("snapshot changed")
+	expect(await readFile(vendoredSchemaPath(root, url), "utf8")).toBe(
+		'{"type":"string"}',
+	)
+	expect(await readFile(vendoredSchemaPath(root, other), "utf8")).toBe(
+		'{"type":"number"}',
+	)
+})
 function documents(
 	schemas: Record<string, unknown>,
 	requested: string[] = [],
@@ -324,6 +593,82 @@ test("published pull command vendors schemas, exposes JSON provenance and reject
 	expect((await invoke(["check"])).exitCode).toBe(1)
 })
 
+test("CLI association selectors preserve literal names and other schemas while refreshing multiple associations", async () => {
+	let type = "string"
+	const requests: string[] = []
+	const server = createServer((request, response) => {
+		requests.push(request.url!)
+		response.end(JSON.stringify({ type }))
+	})
+	server.listen(0, "127.0.0.1")
+	await once(server, "listening")
+	onCleanup(
+		() =>
+			new Promise<void>((resolve) => {
+				server.close(() => resolve())
+				server.closeAllConnections()
+			}),
+	)
+	const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+	const { root } = await setup(
+		{},
+		{
+			associations: [
+				{
+					name: "Tool, configuration",
+					files: ["data/one.json"],
+					schema: `${origin}/one.json`,
+				},
+				{
+					name: "Other tool",
+					files: ["data/two.json"],
+					schema: `${origin}/two.json`,
+				},
+				{
+					name: "Pinned",
+					files: ["data/three.json"],
+					schema: `${origin}/three.json`,
+				},
+			],
+		},
+	)
+	const entry = fileURLToPath(new URL("../../src/cli/main.ts", import.meta.url))
+	async function invoke(args: string[]) {
+		const child = spawn(process.execPath, [entry, "schemas", "pull", ...args], {
+			cwd: root,
+		})
+		let output = ""
+		child.stdout.on("data", (chunk: Buffer) => {
+			output += chunk.toString()
+		})
+		const [exitCode] = await once(child, "exit")
+		return { exitCode, output }
+	}
+	expect((await invoke(["--all"])).exitCode).toBe(0)
+	const first = await readSchemaLock(root)
+	requests.length = 0
+	type = "number"
+	const selected = await invoke([
+		"--association",
+		"Tool, configuration",
+		"--association=Other tool",
+		"--format=json",
+	])
+	expect(selected.exitCode).toBe(0)
+	expect(requests.sort()).toEqual(["/one.json", "/two.json"])
+	expect(JSON.parse(selected.output).schemas[`${origin}/three.json`]).toEqual(
+		first!.schemas[`${origin}/three.json`],
+	)
+	requests.length = 0
+	for (const args of [
+		["--all", "--association", "Pinned"],
+		["--association", "Typo"],
+		["--association"],
+	])
+		expect((await invoke(args)).exitCode).toBe(2)
+	expect(requests).toEqual([])
+})
+
 test("LSP uses locked schemas and reloads when a pull replaces the lock", async () => {
 	const { project, root, uri } = await remoteProject()
 	await pullSchemas(project, {
@@ -416,7 +761,10 @@ test("legacy snapshots validate offline and migrate without losing observation m
 	})
 	expect(migrated).toEqual({ ...legacy, lockVersion: 2 })
 	expect(await readFile(vendoredSchemaPath(root, url), "utf8")).toBe(text)
-	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+	expect(await readdir(path.join(root, ".correctly"))).toEqual([
+		"correctly.lock",
+		"schemas",
+	])
 	expect(await readSchemaLock(root)).toEqual(migrated)
 	expect(
 		await new Engine(project, { fetch: noNetwork, offline: true }).validate(
@@ -433,7 +781,7 @@ test("legacy snapshots validate offline and migrate without losing observation m
 	await expect(readSchemaLock(root)).rejects.toThrow("Invalid")
 })
 
-test("snapshot publication errors restore the previous URL-named schemas", async () => {
+test("snapshot publication failures leave the previous URL-named schemas intact", async () => {
 	const { project, root, file } = await remoteProject()
 	await pullSchemas(project, {
 		fetch: documents({ [url]: { type: "string" } }),
@@ -452,7 +800,10 @@ test("snapshot publication errors restore the previous URL-named schemas", async
 		}),
 	).rejects.toThrow()
 	expect(await readFile(schemaFile, "utf8")).toBe(originalSchema)
-	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+	expect(await readdir(path.join(root, ".correctly"))).toEqual([
+		"correctly.lock",
+		"schemas",
+	])
 	await rm(path.join(root, SCHEMA_LOCK), { recursive: true })
 	await put(root, SCHEMA_LOCK, originalLock)
 	expect(
@@ -499,7 +850,10 @@ test("concurrent pulls publish a graph whose files agree with its lock", async (
 		failures: [],
 		diagnostics: [],
 	})
-	expect(await readdir(path.join(root, ".correctly"))).toEqual(["schemas"])
+	expect(await readdir(path.join(root, ".correctly"))).toEqual([
+		"correctly.lock",
+		"schemas",
+	])
 })
 
 test("HTTP and HTTPS aliases share a filename only when their schema bytes match", async () => {

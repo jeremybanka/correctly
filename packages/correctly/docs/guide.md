@@ -275,23 +275,36 @@ export default defineConfig({
 Install dependencies, then run:
 
 ```sh
-correctly schemas pull
+correctly schemas pull --all
 correctly check --offline
 ```
 
-Commit `correctly.lock` and `.correctly/schemas/`. Both live beside `correctly.config.ts`; running the command from a subdirectory discovers that configuration. `--config` resolves from the working directory. The lock and `.correctly/` are excluded from document discovery automatically. Exclude `.correctly/` from formatters as well: digests cover the UTF-8 schema text, so formatting a vendored file changes its integrity.
+Commit `.correctly/correctly.lock` and `.correctly/schemas/`. The `.correctly/` directory lives beside `correctly.config.ts`; running the command from a subdirectory discovers that configuration. `--config` resolves from the working directory. `.correctly/` is excluded from document discovery automatically. Exclude it from formatters as well: digests cover the UTF-8 schema text, so formatting a vendored file changes its integrity.
 
 The JSON lock uses `lockVersion: 2` and maps retrieval URLs without fragments to `digest` (SHA-256 in hexadecimal), `discoveredAt` (UTC ISO timestamp), and `packages` (package name to exact installed version). Schema filenames derive from their retrieval URLs: `https://dprint.dev/schemas/v0.json` becomes `.correctly/schemas/dprint.dev__schemas__v0.json`. Slashes become double underscores; literal underscores, uppercase letters, query delimiters and other filesystem-sensitive characters are percent-encoded, so distinct hosts, paths and queries remain distinct even on case-insensitive filesystems. The scheme stays in the lock rather than the filename. HTTP and HTTPS variants of one location share a file when their schema bytes match; differing copies are rejected before updating the snapshot. Fragments select within a resource and do not change its filename. A schema update keeps the same filename, with its new digest recorded in the lock. Associated package versions come from installed manifests resolved from the configuration, including scoped packages with restricted exports; dependency ranges in `package.json` are not used. Missing associated packages fail the pull. Package metadata records the environment in which a schema was observed, and does not prove compatibility with those versions. Schemas for software outside Node can still be vendored with an empty package map.
 
-Pull fetches fresh copies of every configured schema's remote graph, including remote references reached through local schemas and unused definitions, under the normal timeout, byte and resource limits. It ignores the HTTP cache and existing snapshots. Schema identifiers, relative reference bases, pointer fragments and anchors retain their original meaning. Shared referenced resources record the combined associated packages. `$ref` in annotation data is not followed. Correctly prepares configured validators before committing the snapshot; malformed schemas or failed downloads leave the previous lock intact. It stages the replacement schema directory and restores the previous schemas if publishing the new lock fails. `.correctly/schemas/` is managed by the command; keep manually maintained local schemas elsewhere. Restore both `correctly.lock` and `.correctly/schemas/` from version control when rolling back to an earlier snapshot. Identical schema bytes and package versions preserve discovery timestamps on repeat pulls.
+`--all` fetches fresh copies of every configured schema's remote graph, including remote references reached through local schemas and unused definitions, under the normal timeout, byte and resource limits. Omitting selectors retains this full-refresh behavior for compatibility. Pull ignores the HTTP cache for refreshed resources. Schema identifiers, relative reference bases, pointer fragments and anchors retain their original meaning. Shared refreshed resources record the combined associated packages. `$ref` in annotation data is not followed. Correctly prepares selected validators before committing the snapshot; malformed schemas or failed downloads leave the previous lock intact. It stages the replacement schema directory and restores the previous schemas if publishing the new lock fails. `.correctly/schemas/` is managed by the command; keep manually maintained local schemas elsewhere. Restore the entire `.correctly/` directory from version control when rolling back to an earlier snapshot. Identical schema bytes and package versions preserve discovery timestamps on repeat pulls.
 
-Legacy `.correctly/lock.json` snapshots with `lockVersion: 1` and digest-named files still validate offline. The next `correctly schemas pull` migrates them to `correctly.lock` and URL-derived filenames, preserving discovery metadata for unchanged resources. The new lock takes precedence if both lockfiles exist; an invalid new lock fails instead of falling back to the legacy snapshot.
+After initializing a complete snapshot, select associations by their exact configured `name`:
 
-Once the lock exists, `SchemaStore` and the built-in Ajv adapter use vendored resources during online and offline checks and editor assistance. They verify digests and fail with `schema-lock` for missing/unpinned resources or invalid locks, and `schema-integrity` for modified resources; they never fall back to the HTTP cache or network. Adding another remote association requires another pull. Local schemas continue to be read from their original files. Custom validators must use `SchemaStore` to participate in locking; arbitrary networking inside adapters is outside this mechanism. Removing the lock restores the ordinary remote-cache behavior.
+```sh
+correctly schemas pull --association "Tool configuration"
+correctly schemas pull --association "Tool configuration" --association "Companion configuration"
+```
+
+Repeated selectors form a union; every association with a matching name is selected. Unknown names and empty selections fail before fetching. Unnamed associations participate in full pulls. The core API accepts the same selection through `pullSchemas(project, { associations: ["Tool configuration"] })`.
+
+A selective pull refreshes only the selected associations' remote graphs. Other schema bytes, digests, discovery dates and package provenance remain unchanged; only selected associations' installed package versions are read. Local schemas continue to come from their configured paths, including installed packages. If a remote resource is also reachable from an unselected association, it stays pinned with its existing provenance. Select every association using that resource together to refresh it. Newly added references to an existing unselected graph also use that pinned graph. Preserved files must still pass integrity checks. Selective pulls retain old resources even if they become unreferenced; a deliberate `--all` refresh prunes them. Concurrent publication or a lock changed during the pull fails rather than overwriting another update; retry against the current snapshot.
+
+Existing root `correctly.lock` snapshots and legacy `.correctly/lock.json` snapshots with `lockVersion: 1` and digest-named files still validate offline. The next successful pull, including a selective pull, writes `.correctly/correctly.lock`, uses URL-derived filenames and removes the older lockfiles, preserving metadata for unchanged resources. Lookup order is `.correctly/correctly.lock`, root `correctly.lock`, then `.correctly/lock.json`; an invalid higher-priority lock fails instead of falling back.
+
+Once the lock exists, `SchemaStore` and the built-in Ajv adapter use vendored resources during online and offline checks and editor assistance. They verify digests and fail with `schema-lock` for missing/unpinned resources or invalid locks, and `schema-integrity` for modified resources; they never fall back to the HTTP cache or network. Adding another remote association requires pulling its name or doing a full refresh. Local schemas continue to be read from their original files. Custom validators must use `SchemaStore` to participate in locking; arbitrary networking inside adapters is outside this mechanism. Removing all supported lockfiles restores the ordinary remote-cache behavior.
 
 ### Dependency update automation
 
-Run pull after installing updated dependencies, and include the `.correctly/` diff in the dependency update review. Document validation belongs in CI: a structurally valid upstream regression should produce an upgrade PR whose CI fails, preserving the updated dependencies and schema snapshots as a baseline to investigate or repair. Correctly cannot recover an upstream version that was never saved.
+Run a selective pull after installing updated dependencies, and include the `.correctly/` diff in the dependency update review. An unscoped pull in global `postUpgradeTasks` refreshes every schema on every upgrade PR. In atom.io, a zod upgrade thereby refreshed a deliberately pinned Renovate schema and reintroduced an upstream `installTools` regression. Dependency-specific `packageRules` control when a pull runs; `--association` controls what it refreshes. Both are needed to isolate schema changes to the upgrade responsible for them.
+
+Document validation belongs in CI: a structurally valid upstream regression should produce an upgrade PR whose CI fails, preserving the updated dependencies and schema snapshots as a baseline to investigate or repair. Correctly cannot recover an upstream version that was never saved.
 
 [Renovate post-upgrade tasks](https://docs.renovatebot.com/configuration-options/#postupgradetasks) can install the new dependencies and pull schemas before making the update commit. The Renovate administrator must allow these commands via the global `allowedCommands` setting; hosted support depends on the service's configuration. For an installation using pnpm:
 
@@ -302,16 +315,20 @@ Run pull after installing updated dependencies, and include the `.correctly/` di
 		"postUpgradeTasks": {
 			"commands": [
 				"pnpm install --frozen-lockfile --ignore-scripts",
-				"pnpm exec correctly schemas pull"
+				"pnpm exec correctly schemas pull --association 'Tool configuration'"
 			],
-			"fileFilters": ["correctly.lock", ".correctly/**"],
+			"fileFilters": [".correctly/**"],
 			"executionMode": "branch"
 		}
 	}]
 }
 ```
 
-The package rule triggers on the associated dependency; pull refreshes all configured schema graphs. Where post-upgrade commands are unavailable, run those same steps in your dependency-update workflow and include the generated files in its pull request. `correctly schemas pull --format json` emits the complete resulting lock for automation. Pull requires online mode and returns exit 2 on failure.
+Move schema pulls out of a global hook and into rules matching their owning dependencies. Add a rule per association, or select several related names in a grouped update. `matchPackageNames` supports exact names, globs such as `@dprint/*`, and regexes such as `/^dprint-plugin-/`; these matches route updates independently of branch names. The association's `packages` list records provenance and does not select upgrades automatically. For tools outside npm, match their Renovate dependency names, for example `renovatebot/github-action` or `ghcr.io/renovatebot/renovate`, and select the `Renovate` association. Schemas without an upgrade owner stay pinned until explicitly pulled.
+
+This repository's `renovate.json` uses separate rules for TypeScript, dprint and Renovate. Its commands run the source CLI because the workspace's generated `dist/` binaries are absent from a fresh checkout; consumers use the published `pnpm exec correctly` command above. The Renovate workflow allows only those scoped pull commands. Keep unrelated global tasks if needed, and ensure any existing task rules retain their install/build steps when adding schema pulls. Update `fileFilters` to include `.correctly/**`; the lock is now inside that directory. During migration, also include root `correctly.lock` to commit its deletion.
+
+Where post-upgrade commands are unavailable, run those same steps in your dependency-update workflow and include the generated files in its pull request. `correctly schemas pull --association 'Tool configuration' --format json` emits the complete merged lock for automation, including unchanged entries. Pull requires online mode and returns exit 2 on failure.
 
 Run document validation in CI on the resulting upgrade PR:
 

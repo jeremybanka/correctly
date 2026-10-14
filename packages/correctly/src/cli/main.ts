@@ -46,16 +46,28 @@ export async function run(
 			const values = inputs.opts
 			json = values.format === "json"
 			if (values.offline) throw new Error("Schema pull requires online mode")
+			if (values.all && values.association !== undefined)
+				throw new Error("Use --all or --association, not both")
 			const { discoverConfig, loadProject } = await import("../core/config.ts")
 			const { pullSchemas } = await import("../core/pull.ts")
 			const configPath = values.config
 				? path.resolve(cwd, values.config)
 				: await discoverConfig(cwd)
-			const lock = await pullSchemas(await loadProject(configPath))
+			const lock = await pullSchemas(
+				await loadProject(configPath),
+				values.association === undefined
+					? {}
+					: {
+							// Preserve individual values: Comline combines repeated strings with commas.
+							associations: context.options
+								.filter((option) => option.key === "association")
+								.map((option) => option.value),
+						},
+			)
 			return {
 				output: json
 					? JSON.stringify(lock, null, 2)
-					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/; wrote correctly.lock`,
+					: `Vendored ${Object.keys(lock.schemas).length} schema resources in .correctly/; wrote .correctly/correctly.lock`,
 				exitCode: 0,
 				warnings,
 			}

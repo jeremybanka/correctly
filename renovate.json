@@ -94,6 +94,50 @@
 			]
 		},
 		{
+			"description": "TypeScript upgrades refresh only the TypeScript schema snapshot",
+			"matchPackageNames": ["typescript"],
+			"postUpgradeTasks": {
+				"commands": [
+					"pnpm install --frozen-lockfile --ignore-scripts",
+					"node packages/correctly/src/cli/main.ts schemas pull --association TypeScript"
+				],
+				"executionMode": "branch",
+				"fileFilters": [".correctly/**"],
+				"installTools": { "node": {}, "pnpm": {} }
+			}
+		},
+		{
+			"description": "Formatter upgrades refresh only the dprint schema snapshot",
+			"groupName": "dprint",
+			"matchPackageNames": ["dprint", "@dprint/*", "/^dprint-plugin-/"],
+			"postUpgradeTasks": {
+				"commands": [
+					"pnpm install --frozen-lockfile --ignore-scripts",
+					"node packages/correctly/src/cli/main.ts schemas pull --association dprint"
+				],
+				"executionMode": "branch",
+				"fileFilters": [".correctly/**"],
+				"installTools": { "node": {}, "pnpm": {} }
+			}
+		},
+		{
+			"description": "Renovate upgrades refresh only the Renovate schema snapshot",
+			"groupName": "renovate",
+			"matchPackageNames": [
+				"renovatebot/github-action",
+				"ghcr.io/renovatebot/renovate"
+			],
+			"postUpgradeTasks": {
+				"commands": [
+					"pnpm install --frozen-lockfile --ignore-scripts",
+					"node packages/correctly/src/cli/main.ts schemas pull --association Renovate"
+				],
+				"executionMode": "branch",
+				"fileFilters": [".correctly/**"],
+				"installTools": { "node": {}, "pnpm": {} }
+			}
+		},
+		{
 			"matchManagers": [
 				"github-actions"
 			],

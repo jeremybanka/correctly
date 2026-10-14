@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { fileURLToPath, pathToFileURL } from "node:url"
+import { fileURLToPath } from "node:url"
 import type { AnySchema, SchemaObject } from "ajv"
 import { parseDocument } from "./parse.ts"
 import { readText, type Project, type ReadText } from "./config.ts"
@@ -9,8 +9,7 @@ import { CorrectlyError } from "./types.ts"
 import { schemaChildren } from "./schema-walk.ts"
 import {
 	readSchemaLock,
-	schemaDigest,
-	vendoredSchemaPath,
+	readLockedSchema,
 	type SchemaLock,
 } from "./schema-lock.ts"
 
@@ -258,40 +257,7 @@ export class SchemaStore {
 	private async remote(uri: string): Promise<string> {
 		if (!this.options.pull) {
 			const lock = await (this.lock ??= readSchemaLock(this.root, this.read))
-			if (lock) {
-				const entry = Object.hasOwn(lock.schemas, uri)
-					? lock.schemas[uri]
-					: undefined
-				if (!entry)
-					throw new CorrectlyError(
-						"schema-lock",
-						`Schema is not locked: ${uri}; run correctly schemas pull`,
-					)
-				const file =
-					lock.lockVersion === 1
-						? path.join(
-								this.root,
-								".correctly",
-								"schemas",
-								`${entry.digest}.json`,
-							)
-						: vendoredSchemaPath(this.root, uri)
-				let text: string
-				try {
-					text = await this.read(pathToFileURL(file).href)
-				} catch (error) {
-					throw new CorrectlyError(
-						"schema-lock",
-						`Cannot read vendored schema ${file}: ${String(error)}`,
-					)
-				}
-				if (schemaDigest(text) !== entry.digest)
-					throw new CorrectlyError(
-						"schema-integrity",
-						`Digest mismatch for vendored schema ${uri}: ${file}`,
-					)
-				return text
-			}
+			if (lock) return readLockedSchema(this.root, uri, lock, this.read)
 		}
 		const cacheFile = path.join(
 			this.cacheDir,

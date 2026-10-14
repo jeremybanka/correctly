@@ -4,7 +4,8 @@ import { pathToFileURL } from "node:url"
 import { readText, type ReadText } from "./config.ts"
 import { CorrectlyError } from "./types.ts"
 
-export const SCHEMA_LOCK = "correctly.lock"
+export const SCHEMA_LOCK = ".correctly/correctly.lock"
+export const PREVIOUS_SCHEMA_LOCK = "correctly.lock"
 export const LEGACY_SCHEMA_LOCK = ".correctly/lock.json"
 export type LockedSchema = {
 	digest: string
@@ -36,6 +37,39 @@ export function vendoredSchemaPath(root: string, uri: string): string {
 		.replace(/\.$/, "%2E")
 	return path.join(root, ".correctly", "schemas", source)
 }
+/** Read the exact pinned bytes, including snapshots using digest-derived filenames. */
+export async function readLockedSchema(
+	root: string,
+	uri: string,
+	lock: SchemaLock,
+	read: ReadText = readText,
+): Promise<string> {
+	const entry = Object.hasOwn(lock.schemas, uri) ? lock.schemas[uri] : undefined
+	if (!entry)
+		throw new CorrectlyError(
+			"schema-lock",
+			`Schema is not locked: ${uri}; run correctly schemas pull`,
+		)
+	const file =
+		lock.lockVersion === 1
+			? path.join(root, ".correctly", "schemas", `${entry.digest}.json`)
+			: vendoredSchemaPath(root, uri)
+	let text: string
+	try {
+		text = await read(pathToFileURL(file).href)
+	} catch (error) {
+		throw new CorrectlyError(
+			"schema-lock",
+			`Cannot read vendored schema ${file}: ${String(error)}`,
+		)
+	}
+	if (schemaDigest(text) !== entry.digest)
+		throw new CorrectlyError(
+			"schema-integrity",
+			`Digest mismatch for vendored schema ${uri}: ${file}`,
+		)
+	return text
+}
 function object(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -45,7 +79,7 @@ export async function readSchemaLock(
 ): Promise<SchemaLock | undefined> {
 	let file = "",
 		text: string | undefined
-	for (const name of [SCHEMA_LOCK, LEGACY_SCHEMA_LOCK]) {
+	for (const name of [SCHEMA_LOCK, PREVIOUS_SCHEMA_LOCK, LEGACY_SCHEMA_LOCK]) {
 		file = path.join(root, name)
 		try {
 			text = await read(pathToFileURL(file).href)
