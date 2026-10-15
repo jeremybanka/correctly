@@ -12,7 +12,7 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `test`              | Run public and private source tests once.                                                                                                                                   |
 | `test:watch`        | Run interactive test suites.                                                                                                                                                |
 | `test:public`       | Run each package's public tests once.                                                                                                                                       |
-| `test:breaks`       | Replay each package's latest released public tests through break-check.                                                                                                     |
+| `test:breaks`       | Replay each package's latest released public tests through breakage.                                                                                                        |
 | `build`             | Build ESM CLI, LSP, and typed shared-core entries.                                                                                                                          |
 | `build:vsix`        | Bundle the VS Code client/server and write a universal VSIX to `artifacts`.                                                                                                 |
 | `build:zed`         | Build precompiled Zed WASM embedding the bundled server/worker; write a sideload directory and `.tar.gz` archive to `artifacts`. Run `mise install` for Rust prerequisites. |

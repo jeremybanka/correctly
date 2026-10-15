@@ -42,7 +42,7 @@
 		"build:zed": "node src/cli/zed.ts",
 		"test": "vp test",
 		"test:public": "vp test tests/public",
-		"test:breaks": "break-check",
+		"test:breaks": "breakage",
 		"test:private": "vp test tests/private",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"
@@ -67,7 +67,7 @@
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.140.0",
 		"@vscode/vsce": "4.0.0",
-		"break-check": "0.8.2",
+		"breakage": "0.8.1",
 		"rolldown": "1.2.14",
 		"vscode-languageclient": "10.1.2"
 	},
