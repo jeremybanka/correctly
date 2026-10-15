@@ -263,9 +263,9 @@ importers:
       '@vscode/vsce':
         specifier: 4.0.0
         version: 4.0.0
-      break-check:
-        specifier: 0.8.2
-        version: 0.8.2(zod@4.6.7)
+      breakage:
+        specifier: 0.8.1
+        version: 0.8.1(zod@4.6.7)
       rolldown:
         specifier: 1.2.14
         version: 1.2.14
@@ -275,9 +275,9 @@ importers:
 
   packages/schemars:
     devDependencies:
-      break-check:
-        specifier: 0.8.2
-        version: 0.8.2(zod@4.6.7)
+      breakage:
+        specifier: 0.8.1
+        version: 0.8.1(zod@4.6.7)
       correctly:
         specifier: workspace:*
         version: link:../correctly
@@ -1562,8 +1562,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  break-check@0.8.2:
-    resolution: {integrity: sha512-Ff4qfyry4IX4ZwRdk9M+IbF+ZFDbb5D3RCWHC5FlMM5fRiyZnLnzoGCAmHStLrsSKJGmHt9zu0MGdqzg0OFLPQ==}
+  breakage@0.8.1:
+    resolution: {integrity: sha512-+NNLOg547CbFzzz/id0owulW5Wde+CiH4AfeULAMr7FF4X2IWb0wsWv4KQH3Ok/UZxTKMk+WhNCuw7SpN6PUfQ==}
     hasBin: true
 
   buffer-crc32@0.2.13:
@@ -3353,7 +3353,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  break-check@0.8.2(zod@4.6.7):
+  breakage@0.8.1(zod@4.6.7):
     dependencies:
       arktype: 2.2.7
       comline: 0.9.0(arktype@2.2.7)(zod@4.6.7)

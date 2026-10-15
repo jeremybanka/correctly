@@ -22,10 +22,10 @@ export default defineConfig({
 			validate: ajv({ schema: "node_modules/@changesets/config/schema.json" }),
 		},
 		...(["correctly", "schemars"] as const).map((name) => ({
-			name: `break-check (${name})`,
-			files: [`packages/${name}/break-check.config.json`],
+			name: `breakage (${name})`,
+			files: [`packages/${name}/breakage.config.json`],
 			validate: ajv({
-				schema: `packages/${name}/node_modules/break-check/dist/break-check.main.schema.json`,
+				schema: `packages/${name}/node_modules/breakage/dist/breakage.main.schema.json`,
 			}),
 		})),
 		{
