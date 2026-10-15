@@ -31,7 +31,7 @@
 		"build": "vp pack",
 		"test": "vp test",
 		"test:public": "vp test tests/public",
-		"test:breaks": "breakage",
+		"test:breakage": "breakage",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},

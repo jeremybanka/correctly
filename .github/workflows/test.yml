@@ -99,7 +99,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - run: pnpm test:breaks
+      - run: pnpm test:breakage
 
   Test:
     if: ${{ always() }}
