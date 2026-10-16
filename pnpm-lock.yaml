@@ -264,8 +264,8 @@ importers:
         specifier: 4.0.0
         version: 4.0.0
       breakage:
-        specifier: 0.8.2
-        version: 0.8.2(zod@4.6.7)
+        specifier: 0.8.3
+        version: 0.8.3(zod@4.6.7)
       rolldown:
         specifier: 1.2.14
         version: 1.2.14
@@ -276,8 +276,8 @@ importers:
   packages/schemars:
     devDependencies:
       breakage:
-        specifier: 0.8.2
-        version: 0.8.2(zod@4.6.7)
+        specifier: 0.8.3
+        version: 0.8.3(zod@4.6.7)
       correctly:
         specifier: workspace:*
         version: link:../correctly
@@ -1562,8 +1562,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  breakage@0.8.2:
-    resolution: {integrity: sha512-3/2UbTqcec8daCHPjKVvQ82ImHr2IW6n3OYn2ztLW+GYsSv2aZiF9BU0wPsNyzwqVsik7mWPtywgE9zhD0O1zQ==}
+  breakage@0.8.3:
+    resolution: {integrity: sha512-HC/1CpUJe6R27M2X+bKGK8uHQCoTCdj19gymTP/UpyQKywPHeoo5bxXxgqoh85BqiwhkhbJjUzMHofvryGR4Zw==}
     hasBin: true
 
   buffer-crc32@0.2.13:
@@ -3353,7 +3353,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  breakage@0.8.2(zod@4.6.7):
+  breakage@0.8.3(zod@4.6.7):
     dependencies:
       arktype: 2.2.8
       comline: 0.9.0(arktype@2.2.8)(zod@4.6.7)

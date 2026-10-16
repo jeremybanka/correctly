@@ -36,7 +36,7 @@
 		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},
 	"devDependencies": {
-		"breakage": "0.8.2",
+		"breakage": "0.8.3",
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {
