@@ -2,8 +2,16 @@ import { spawn } from "node:child_process"
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import path from "node:path"
-import { fileURLToPath, pathToFileURL } from "node:url"
+import { fileURLToPath } from "node:url"
 import { bundleEditor } from "./editor-bundle.ts"
+
+export function defaultPackageRoot(): string {
+	const directory = path.dirname(fileURLToPath(import.meta.url))
+	return path.resolve(
+		directory,
+		path.basename(path.dirname(directory)) === "src" ? "../.." : "..",
+	)
+}
 
 export async function buildVsix(
 	packageRoot: string,
@@ -56,14 +64,42 @@ export async function buildVsix(
 	return destination
 }
 
-if (
-	process.argv[1] &&
-	pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
-) {
-	const packageRoot = fileURLToPath(new URL("../../", import.meta.url))
-	const output = await buildVsix(
-		packageRoot,
-		path.resolve(packageRoot, "../../artifacts"),
+export type VscodeInstallRequest = {
+	cwd: string
+	editorCommand: string
+	vsixPath: string
+}
+export type VscodeInstallResult = { exitCode: number; error?: string }
+
+export async function installVscodeExtension({
+	cwd,
+	editorCommand,
+	vsixPath,
+}: VscodeInstallRequest): Promise<VscodeInstallResult> {
+	const child = spawn(
+		editorCommand,
+		["--install-extension", vsixPath, "--force"],
+		{ cwd, stdio: "inherit" },
 	)
-	process.stdout.write(`${output}\n`)
+	return new Promise((resolve) => {
+		child.on("error", (error: NodeJS.ErrnoException) => {
+			resolve({
+				exitCode: 1,
+				error:
+					error.code === "ENOENT"
+						? `${editorCommand} was not found on PATH. Install its shell command or use --target or --build-only.`
+						: error.message,
+			})
+		})
+		child.on("close", (exitCode, signal) => {
+			resolve(
+				signal
+					? {
+							exitCode: 1,
+							error: `${editorCommand} exited from signal ${signal}.`,
+						}
+					: { exitCode: exitCode ?? 1 },
+			)
+		})
+	})
 }

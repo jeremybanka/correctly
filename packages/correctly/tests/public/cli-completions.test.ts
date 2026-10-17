@@ -9,9 +9,28 @@ const entry = fileURLToPath(new URL("../../src/cli/main.ts", import.meta.url))
 test("CLI completion shares command routes, option choices, and filesystem hints with parsing", async () => {
 	const commands = await correctlyCli.complete({ words: [""] })
 	expect(commands.candidates.map(({ value }) => value)).toEqual(
-		expect.arrayContaining(["check", "schemas", "completion"]),
+		expect.arrayContaining(["check", "schemas", "vsix", "completion"]),
 	)
 	expect(commands.diagnostics).toEqual([])
+	const editors = await correctlyCli.complete({
+		words: ["vsix", "--target", ""],
+	})
+	expect(editors.candidates.map(({ value }) => value)).toEqual(
+		expect.arrayContaining(["code", "code-insiders", "cursor"]),
+	)
+	expect(
+		(await correctlyCli.complete({ words: ["vsix", "--outdir", ""] }))
+			.fileSystem,
+	).toBe("directories")
+	const vsixOptions = await correctlyCli.complete({
+		words: ["vsix", "--build-only", "--target", "code", "--"],
+	})
+	expect(vsixOptions.candidates.map(({ value }) => value)).not.toContain(
+		"--target",
+	)
+	expect(vsixOptions.candidates.map(({ value }) => value)).not.toContain(
+		"--build-only",
+	)
 	for (const words of [
 		["check", "--format", "j"],
 		["--format=j"],

@@ -211,6 +211,9 @@ importers:
 
   packages/correctly:
     dependencies:
+      '@vscode/vsce':
+        specifier: 4.0.0
+        version: 4.0.0
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -229,6 +232,9 @@ importers:
       picomatch:
         specifier: 4.0.7
         version: 4.0.7
+      rolldown:
+        specifier: 1.2.14
+        version: 1.2.14
       tinyglobby:
         specifier: 0.2.17
         version: 0.2.17
@@ -238,6 +244,9 @@ importers:
       vscode-json-languageservice:
         specifier: 5.7.2
         version: 5.7.2
+      vscode-languageclient:
+        specifier: 10.1.2
+        version: 10.1.2
       vscode-languageserver:
         specifier: 10.1.2
         version: 10.1.2
@@ -260,18 +269,9 @@ importers:
       '@types/vscode':
         specifier: 1.140.0
         version: 1.140.0
-      '@vscode/vsce':
-        specifier: 4.0.0
-        version: 4.0.0
       breakage:
         specifier: 0.8.3
         version: 0.8.3(zod@4.6.7)
-      rolldown:
-        specifier: 1.2.14
-        version: 1.2.14
-      vscode-languageclient:
-        specifier: 10.1.2
-        version: 10.1.2
 
   packages/schemars:
     devDependencies:

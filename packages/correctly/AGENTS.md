@@ -2,6 +2,7 @@
 
 - Keep schema associations in `correctly.config.ts`; document `$schema` fields do not select schemas.
 - Run `correctly check` in CI and use the extension or `correctly-lsp --stdio` for editor assistance.
+- VS Code: run `pnpm exec correctly vsix` from a project with Correctly installed to build and install its matching extension. Use `--target code-insiders` or `--target cursor` for another editor, `--build-only` to skip installation, and `--outdir path` to override the default `dist` output directory. Rebuild and reinstall after upgrading Correctly; no separate source checkout is needed.
 - Zed: run `pnpm build:zed` and sideload the generated `artifacts/Correctly-<version>.zed` directory through **Install Dev Extension**. The artifact ships precompiled WASM and the bundled server; recipients need no Rust. Enable it only in trusted projects; see `docs/guide.md` for setup and Node runtime overrides.
 - CLI routes, parsing, help, warnings, and shell completions use Comline. Use `correctly --help` for usage and `correctly completion install <bash|zsh|fish|nushell|carapace>` to install completions. Unknown options warn on stderr; JSON reports stay on stdout. Boolean options accept `false` or `0`, and repeated option values are comma-joined.
 - JSON is strict. JSONC permits comments and trailing commas. Duplicate keys are always errors.

@@ -393,7 +393,18 @@ Readable reports use terminal colors automatically: bold file names, red error c
 
 ## Editor installation and shared APIs
 
-From the repository, run `pnpm build:vsix`, then `code --install-extension artifacts/Correctly-0.0.0.vsix`. The extension requires VS Code 1.105 or later: its [pinned Electron 37.6.0 runtime](https://github.com/microsoft/vscode/blob/1.105.0/.npmrc) includes [Node 22.19](https://releases.electronjs.org/release/v37.6.0), which supports native TypeScript configuration loading. The universal VSIX bundles the client, server and project worker. Configuration imports resolve from the project, so install Correctly and any adapter dependencies there. Open a trusted workspace with a configuration to activate it. All file documents can reach the server; project patterns select which ones are checked. Missing configurations produce diagnostics for JSON, JSONC, YAML, and TOML; unrelated languages without a configuration remain quiet. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
+From a project with Correctly installed, build and install the matching VS Code extension with:
+
+```sh
+pnpm exec correctly vsix
+pnpm exec correctly vsix --target code-insiders
+pnpm exec correctly vsix --target cursor
+pnpm exec correctly vsix --build-only --outdir artifacts
+```
+
+The default editor command is `code`; it must be on `PATH`. `--target` (`-t`) accepts another editor command or executable path. The CLI installs with `--force` to replace the previous extension and returns the editor's exit status. `--build-only` creates the VSIX without invoking an editor. `--outdir` (`-o`) defaults to `dist` and resolves from the current directory. The universal `Correctly-<version>.vsix` and its `.correctly-vsix` staging directory are written there, using the installed package version. The build uses the sources and dependencies shipped in that package; no separate checkout is needed, and it does not evaluate project configuration. Rebuild and reinstall after upgrading Correctly. For repository development, `pnpm build:vsix` writes the VSIX to `artifacts` without installing it.
+
+The extension requires VS Code 1.105 or later: its [pinned Electron 37.6.0 runtime](https://github.com/microsoft/vscode/blob/1.105.0/.npmrc) includes [Node 22.19](https://releases.electronjs.org/release/v37.6.0), which supports native TypeScript configuration loading. The universal VSIX bundles the client, server and project worker. Configuration imports resolve from the project, so install Correctly and any adapter dependencies there. Open a trusted workspace with a configuration to activate it. All file documents can reach the server; project patterns select which ones are checked. Missing configurations produce diagnostics for JSON, JSONC, YAML, and TOML; unrelated languages without a configuration remain quiet. The extension's **Correctly: Restart Server** command refreshes its lifecycle. Other LSP clients launch `correctly-lsp --stdio` and must send workspace folders and file-change notifications for automatic disk refresh. No formatter or automatic fixes are registered.
 
 Microsoft's JSON language service supplies completions and hover for JSON/JSONC. YAML and TOML currently receive validation diagnostics only. Its AST is retained with traversal methods bound to the original document; a selection view disables automatic embedded `$schema` selection. Ajv remains the validation authority. Built-in VS Code JSON features may independently provide suggestions/diagnostics; set `json.validate.enable` to `false` to use only Correctly validation, if desired.
 
