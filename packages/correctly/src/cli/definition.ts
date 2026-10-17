@@ -87,9 +87,51 @@ const pullOptions = options<PullOptions>(
 	},
 )
 
+const vsixOptionsSchema = z.strictObject({
+	"build-only": z.boolean().default(false),
+	outdir: z.string().min(1).default("dist"),
+	target: z.string().min(1).default("code"),
+	help: z.boolean().optional(),
+})
+type VsixOptions = z.infer<typeof vsixOptionsSchema>
+const vsixOptions = options<VsixOptions>(
+	"Build and install the bundled VS Code extension.",
+	vsixOptionsSchema,
+	{
+		"build-only": {
+			example: "--build-only",
+			description: "Build the VSIX without installing it.",
+			parse: parseBooleanOption,
+			required: false,
+			completion: { repeatable: false },
+		},
+		outdir: {
+			flag: "o",
+			example: "--outdir dist",
+			description: "Directory for the generated VSIX (default: dist).",
+			parse: parseStringOption,
+			required: false,
+			completion: { fileSystem: "directories", repeatable: false },
+		},
+		target: {
+			flag: "t",
+			example: "--target code-insiders",
+			description: "Editor command used to install the VSIX (default: code).",
+			parse: parseStringOption,
+			required: false,
+			completion: {
+				choices: ["code", "code-insiders", "cursor"],
+				repeatable: false,
+			},
+		},
+		...helpOption().optionConfigs,
+	},
+)
+
 const routes = optional({
 	check: optional({ "$...files": null }),
 	schemas: optional({ pull: null }),
+	vsix: null,
 	completion: optional({
 		$target: null,
 		install: optional({ $target: null }),
@@ -106,6 +148,7 @@ type Definition = Pick<
 		"check/$...files": OptionsGroup<CheckOptions>
 		schemas: OptionsGroup<CheckOptions>
 		"schemas/pull": OptionsGroup<PullOptions>
+		vsix: OptionsGroup<VsixOptions>
 		completion: ReturnType<typeof helpOption>
 		"completion/$target": ReturnType<typeof helpOption>
 		"completion/install": ReturnType<typeof helpOption>
@@ -127,6 +170,7 @@ const definition: Definition = {
 		"check/$...files": checkOptions,
 		schemas: { ...checkOptions, description: "Manage vendored schemas." },
 		"schemas/pull": pullOptions,
+		vsix: vsixOptions,
 		completion: helpOption("Print a completion setup artifact."),
 		"completion/$target": helpOption("Print a completion setup artifact."),
 		"completion/install": helpOption(

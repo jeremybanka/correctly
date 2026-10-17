@@ -23,6 +23,8 @@ export default defineConfig({
 
 Install `correctly` and `@correctlyjs/schemars` in your project and save this as `correctly.config.ts`, then run `correctly check`. Comline loads the configuration and its imported implementations. Exit codes are 0 for success, 1 for document errors, and 2 for configuration/schema/execution failures. Use `correctly check --format json` for a versioned report or `correctly check --offline` for cached remote schemas.
 
+Run `pnpm exec correctly vsix` to build and install the VS Code extension from your project's installed Correctly package. Use `--target code-insiders` or `--target cursor` to select another editor, or `--build-only` to generate the VSIX without installing it. See the [editor installation guide](docs/guide.md#editor-installation-and-shared-apis) for output options and requirements.
+
 The VS Code and Zed extensions and `correctly-lsp --stdio` use the same runtime for diagnostics in every supported format, with completion and hover for JSON/JSONC. Enable them only in trusted workspaces; executable configuration reloads after saving, and data and schema buffers validate as you type. The [Zed setup guide](docs/guide.md#zed) covers building and sideloading precompiled WASM; recipients need no Rust toolchain.
 
 Built-in `json()`, `jsonc()`, `yaml()`, and `toml()` parsers compose with the Ajv adapter for drafts 7 and 2020-12 or with custom validators accepting JSON values. File extensions select the default parser; explicit `parse` overrides it. Schema extensions are explicit per validator. Unsupported schema formats produce actionable extension requirements. Documents' `$schema` properties remain ordinary data. Correctly does not coerce values, insert defaults, remove properties, format, or fix documents.

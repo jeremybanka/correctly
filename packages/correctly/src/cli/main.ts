@@ -10,10 +10,17 @@ import {
 } from "comline"
 import { correctlyCli } from "./definition.ts"
 import { failure, type Report } from "../core/types.ts"
+import type { buildVsix, installVscodeExtension } from "./vsix.ts"
+
+type CliEnvironment = {
+	buildVsix?: typeof buildVsix
+	installVscodeExtension?: typeof installVscodeExtension
+}
 
 export async function run(
 	args: string[],
 	cwd = process.cwd(),
+	environment: CliEnvironment = {},
 ): Promise<{ output: string; exitCode: number; warnings?: CliWarning[] }> {
 	let json = false
 	let warnings: CliWarning[] = []
@@ -42,6 +49,34 @@ export async function run(
 		const { inputs } = parsed
 		if (inputs.case === "")
 			return { output: help(correctlyCli.definition), exitCode: 0, warnings }
+		if (inputs.case === "vsix") {
+			const values = inputs.opts
+			const vsix = await import("./vsix.ts")
+			const build = environment.buildVsix ?? vsix.buildVsix
+			const destination = await build(
+				vsix.defaultPackageRoot(),
+				path.resolve(cwd, values.outdir),
+			)
+			const output = `correctly vsix: built ${destination}.`
+			if (values["build-only"]) return { output, exitCode: 0, warnings }
+			const install =
+				environment.installVscodeExtension ?? vsix.installVscodeExtension
+			const result = await install({
+				cwd,
+				editorCommand: values.target,
+				vsixPath: destination,
+			})
+			return {
+				output: `${output}\ncorrectly vsix: ${
+					result.error ??
+					(result.exitCode === 0
+						? `installed ${destination} with ${values.target}.`
+						: `${values.target} exited with code ${result.exitCode}.`)
+				}`,
+				exitCode: result.exitCode,
+				warnings,
+			}
+		}
 		if (inputs.case === "schemas/pull") {
 			const values = inputs.opts
 			json = values.format === "json"
@@ -73,7 +108,9 @@ export async function run(
 			}
 		}
 		if (inputs.case !== "check" && inputs.case !== "check/$...files")
-			throw new Error("Expected a check, schemas pull, or completion command")
+			throw new Error(
+				"Expected a check, schemas pull, vsix, or completion command",
+			)
 		const values = inputs.opts
 		json = values.format === "json"
 		const { check, readableReport } = await import("./check.ts")
@@ -127,9 +164,11 @@ export async function run(
 	}
 }
 
-const result = await run(process.argv.slice(2))
-logWarnings(result.warnings ?? [])
-process.stdout.write(
-	result.output.endsWith("\n") ? result.output : `${result.output}\n`,
-)
-process.exitCode = result.exitCode
+if (import.meta.main) {
+	const result = await run(process.argv.slice(2))
+	logWarnings(result.warnings ?? [])
+	process.stdout.write(
+		result.output.endsWith("\n") ? result.output : `${result.output}\n`,
+	)
+	process.exitCode = result.exitCode
+}

@@ -38,7 +38,7 @@
 	],
 	"scripts": {
 		"build": "vp pack",
-		"build:vsix": "node src/cli/vsix.ts",
+		"build:vsix": "node src/cli/main.ts vsix --build-only --outdir ../../artifacts",
 		"build:zed": "node src/cli/zed.ts",
 		"test": "vp test",
 		"test:public": "vp test tests/public",
@@ -48,15 +48,18 @@
 		"test:distribution": "vp test --config vite.distribution.config.ts"
 	},
 	"dependencies": {
+		"@vscode/vsce": "4.0.0",
 		"ajv": "8.20.0",
 		"ajv-formats": "3.0.1",
 		"comline": "0.9.0",
 		"ignore": "7.0.12",
 		"jsonc-parser": "3.3.1",
 		"picomatch": "4.0.7",
+		"rolldown": "1.2.14",
 		"tinyglobby": "0.2.17",
 		"toml-eslint-parser": "1.0.3",
 		"vscode-json-languageservice": "5.7.2",
+		"vscode-languageclient": "10.1.2",
 		"vscode-languageserver": "10.1.2",
 		"vscode-languageserver-textdocument": "1.0.15",
 		"yaml": "2.9.1",
@@ -66,10 +69,7 @@
 		"@types/node": "26.6.5",
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.140.0",
-		"@vscode/vsce": "4.0.0",
-		"breakage": "0.8.3",
-		"rolldown": "1.2.14",
-		"vscode-languageclient": "10.1.2"
+		"breakage": "0.8.3"
 	},
 	"engines": {
 		"node": ">=22.18.0"

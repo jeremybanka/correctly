@@ -25,6 +25,7 @@ test("CLI help documents commands and options without loading configuration", as
 		["check", "-h"],
 		["schemas", "--help"],
 		["schemas", "pull", "--help"],
+		["vsix", "--help"],
 		["check", "--config", "missing.ts", "--format", "invalid", "--help"],
 		["completion", "--help"],
 		["completion", "install", "--help"],
@@ -51,6 +52,10 @@ test("CLI help documents commands and options without loading configuration", as
 	expect(output).toContain("default: readable")
 	expect(output).toContain("correctly-lsp --stdio")
 	expect(output).toContain("schemas pull")
+	expect(output).toContain("correctly vsix")
+	expect(output).toContain("--build-only")
+	expect(output).toContain("-o, --outdir dist")
+	expect(output).toContain("-t, --target code-insiders")
 	expect(output).toContain("completion install <target>")
 	expect(output).toContain("Exit 0: valid; 1: document errors; 2:")
 })
