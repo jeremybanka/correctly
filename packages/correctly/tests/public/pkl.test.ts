@@ -161,6 +161,56 @@ test("local imports, import expressions, amends, extends and resource dependenci
 	})
 })
 
+test.each([
+	["fixed", "amends"],
+	["const", "amends"],
+	["fixed", "extends"],
+	["const", "extends"],
+])(
+	"%s properties remain immutable through chained %s",
+	async (modifier, relation) => {
+		const { root, engine, file } = await project()
+		await put(root, "base.pkl", `${modifier} port: Int = 80`)
+		await put(root, "middle.pkl", `${relation} "base.pkl"\nx = 1`)
+		expect(
+			await engine.validate(file, `${relation} "middle.pkl"\ny = 2`),
+		).toMatchObject({ diagnostics: [], failures: [] })
+		expect(
+			await engine.validate(file, `${relation} "middle.pkl"\nport = 90`),
+		).toMatchObject({
+			diagnostics: [
+				{
+					code: "pkl/evaluation",
+					message: expect.stringContaining(
+						"cannot override immutable property 'port'",
+					),
+				},
+			],
+			failures: [],
+		})
+		for (const override of [
+			"port = 90",
+			"port = 80",
+			...(relation === "extends" ? ["port: Int = 90"] : []),
+		]) {
+			await put(root, "middle.pkl", `${relation} "base.pkl"\n${override}`)
+			expect(
+				await engine.validate(file, `${relation} "middle.pkl"\nx = 1`),
+			).toMatchObject({
+				diagnostics: [
+					{
+						code: "pkl/evaluation",
+						message: expect.stringContaining(
+							"cannot override immutable property 'port'",
+						),
+					},
+				],
+				failures: [],
+			})
+		}
+	},
+)
+
 test("glob imports and explicit environment/properties", async () => {
 	const { root, engine, file } = await project({
 		environment: { APP_NAME: "demo" },

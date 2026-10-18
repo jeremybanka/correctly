@@ -116,7 +116,7 @@ The bundled WASM build of [pklr](https://github.com/jdx/pklr) provides types, co
 
 HTTP(S) modules and pklr-supported `package://` imports use Correctly's host fetch implementation. Relative remote imports resolve against the importing URL. ZIP packages are expanded in WASM memory. Remote timeout, byte, request and redirect limits apply; successful downloads are cached under `<cacheDir>/pkl`. `correctly check --offline` and `remote.offline` forbid network requests and require cached modules/packages. Local resources do not use the remote cache. Evaluation is bounded to 256 resource passes, 512 resources and 16 MiB of loaded resource data; an expanded package permits at most 4096 entries and 16 MiB. Resource and runtime failures use exit code 2; syntax, missing local imports, native type/constraint and evaluation errors use exit code 1.
 
-The CLI, core API, stdio LSP and bundled VSIX share this evaluator. Syntax byte offsets are converted to UTF-16 editor positions. pklr does not expose evaluation source maps: evaluation diagnostics point to the start of the module, and nested JSON Schema diagnostics retain their JSON pointers while using the module's source range. Imported syntax errors identify the source module in the message. PKL does not expose completion/hover through Correctly's JSON Schema editor service.
+The CLI, core API, stdio LSP, bundled VSIX and Zed extension share this evaluator. Syntax byte offsets are converted to UTF-16 editor positions. pklr does not expose evaluation source maps: evaluation diagnostics point to the start of the module, and nested JSON Schema diagnostics retain their JSON pointers while using the module's source range. Imported syntax errors identify the source module in the message. PKL does not expose completion/hover through Correctly's JSON Schema editor service.
 
 Compatibility follows the pinned pklr implementation, not an assertion of complete compatibility with Apple's official Pkl runtime or toolchain. Unsupported upstream features fail visibly; project/package dependency resolution is limited to what pklr implements, and its package download conventions do not implement the official package resolver's full metadata/checksum protocol. The bundled build patches inherited module constraint checking. The exact upstream commit, patch, build recipe and license inventory are recorded in `compatibility/pklr/README.md` in the source repository. Consumers need neither Rust nor an external Pkl executable.
 
@@ -472,12 +472,13 @@ Use a current Zed release supporting extension API 0.7.0. The adapter uses Zed's
 		"JSON": { "language_servers": ["correctly", "..."] },
 		"JSONC": { "language_servers": ["correctly", "..."] },
 		"YAML": { "language_servers": ["correctly", "..."] },
-		"TOML": { "language_servers": ["correctly", "..."] }
+		"TOML": { "language_servers": ["correctly", "..."] },
+		"Pkl": { "language_servers": ["correctly", "..."] }
 	}
 }
 ```
 
-The `"..."` entry keeps other registered language servers enabled. They can produce independent diagnostics or suggestions; use `["correctly"]` for a language if you want Correctly as its sole server. Configure your formatter separately. Zed's existing language support supplies syntax highlighting; install YAML or TOML support if those languages are not recognized. Correctly attaches to these four languages; custom parser file types require an additional language association. Diagnostics cover all four formats; completion and hover cover JSON/JSONC. Unsaved data/schema buffers and saved configuration/import changes use the existing LSP lifecycle and dynamic file watchers.
+The `"..."` entry keeps other registered language servers enabled. They can produce independent diagnostics or suggestions; use `["correctly"]` for a language if you want Correctly as its sole server. Configure your formatter separately. Zed's existing language support supplies syntax highlighting; install YAML, TOML, or Pkl support if those languages are not recognized. Correctly attaches to these five languages; custom parser file types require an additional language association. Diagnostics cover all five formats; completion and hover cover JSON/JSONC. Unsaved data/schema buffers and saved configuration/import changes use the existing LSP lifecycle and dynamic file watchers.
 
 To select a Node executable, set `lsp.correctly.binary.path` to an absolute Node 22.18+ path. Its optional `arguments` are Node flags prepended to the bundled server path and `--stdio`; optional `env` values override the worktree shell environment. For example:
 

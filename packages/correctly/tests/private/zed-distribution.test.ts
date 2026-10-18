@@ -92,13 +92,14 @@ test("Zed archive sideloads precompiled WASM without a Rust build or new grammar
 		schema_version: 1,
 		language_servers: {
 			correctly: {
-				languages: ["JSON", "JSONC", "YAML", "TOML"],
-				opt_in_languages: ["JSON", "JSONC", "YAML", "TOML"],
+				languages: ["JSON", "JSONC", "YAML", "TOML", "Pkl"],
+				opt_in_languages: ["JSON", "JSONC", "YAML", "TOML", "Pkl"],
 				language_ids: {
 					JSON: "json",
 					JSONC: "jsonc",
 					YAML: "yaml",
 					TOML: "toml",
+					Pkl: "pkl",
 				},
 			},
 		},
