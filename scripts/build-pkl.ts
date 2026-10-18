@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import os from "node:os"
 import { fileURLToPath } from "node:url"
@@ -11,6 +11,9 @@ const upstream = new URL("artifacts/pklr-source/", root)
 const revision = "5084552234a7e5f8a691df61d80b4141cea84f4f"
 const sourceHash =
 	"c8feacc200ea0cac7eb16fb83f60affd3072a0aae79ce337ae156f6c05da0932"
+const check = process.argv.includes("--check")
+const diagnostics = new URL("artifacts/pkl-reproducibility/", root)
+if (check) await rm(diagnostics, { recursive: true, force: true })
 function command(name: string, args: string[]): void {
 	const result = spawnSync(name, args, {
 		cwd: fileURLToPath(upstream),
@@ -98,11 +101,20 @@ for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
 	}
 }
 const licenseFile = new URL("packages/correctly/src/core/pklr.LICENSE", root)
-if (process.argv.includes("--check")) {
-	if (!bytes.equals(await readFile(destination)))
-		throw new Error("pklr.wasm is stale; run pnpm build:pkl")
-	if (licenses !== (await readFile(licenseFile, "utf8")))
-		throw new Error("pklr.LICENSE is stale; run pnpm build:pkl")
+if (check) {
+	const expected = await readFile(destination)
+	const expectedLicenses = await readFile(licenseFile, "utf8")
+	if (!bytes.equals(expected) || licenses !== expectedLicenses) {
+		await mkdir(diagnostics, { recursive: true })
+		await writeFile(new URL("expected.wasm", diagnostics), expected)
+		await writeFile(new URL("actual.wasm", diagnostics), bytes)
+		await writeFile(new URL("expected.LICENSE", diagnostics), expectedLicenses)
+		await writeFile(new URL("actual.LICENSE", diagnostics), licenses)
+		const asset = bytes.equals(expected) ? "pklr.LICENSE" : "pklr.wasm"
+		throw new Error(
+			`${asset} is stale; run pnpm build:pkl (comparison files: ${fileURLToPath(diagnostics)})`,
+		)
+	}
 } else {
 	await writeFile(destination, bytes)
 	await writeFile(licenseFile, licenses)

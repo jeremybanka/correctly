@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
-import { readFile, readdir } from "node:fs/promises"
+import { readFile, readdir, symlink, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { beforeAll, expect, test } from "vite-plus/test"
@@ -38,16 +38,20 @@ async function embeddedServer() {
 	const root = await temp()
 	// Exercise bytes carried by the distributable WASM, without resolving
 	// server dependencies from the repository or copying a staging server.
-	for (const name of ["server.mjs", "worker.mjs"]) {
+	for (const name of [
+		"server.mjs",
+		"worker.mjs",
+		"pklr.wasm",
+		"pklr.LICENSE",
+	]) {
 		const bundled = await readFile(
 			path.join(artifacts, ".correctly-zed/dist", name),
 		)
 		const offset = wasm.indexOf(bundled)
 		expect(offset, `WASM must embed the complete ${name}`).toBeGreaterThan(-1)
-		await put(
-			root,
-			name,
-			wasm.subarray(offset, offset + bundled.length).toString(),
+		await writeFile(
+			path.join(root, name),
+			wasm.subarray(offset, offset + bundled.length),
 		)
 	}
 	return { root, entry: path.join(root, "server.mjs") }
@@ -190,4 +194,24 @@ test("Zed's embedded server supplies hints and reloads saved schemas and executa
 		changes: [{ uri: pathToFileURL(configPath).href, type: 2 }],
 	})
 	expect((await client.wait(uri, 2, count)).diagnostics).toEqual([])
+})
+
+test("Zed's embedded worker carries the PKL parser's WASM asset", async () => {
+	const root = await temp()
+	await put(root, "node_modules/.keep", "")
+	await symlink(packageRoot, path.join(root, "node_modules/correctly"), "dir")
+	await put(
+		root,
+		"correctly.config.ts",
+		`import {defineConfig} from "correctly"; import {pkl} from "correctly/validators/pkl"; export default defineConfig({files:["data.pkl"],associations:[{files:["*.pkl"],validate:pkl()}]})`,
+	)
+	const isolated = await embeddedServer()
+	const client = await lspClient([root], isolated.entry, isolated.root)
+	const uri = pathToFileURL(path.join(root, "data.pkl")).href
+	await client.open(uri, "port: Int(this > 0) = -1", 1, "pkl")
+	expect((await client.wait(uri, 1)).diagnostics[0]?.code).toBe(
+		"pkl/evaluation",
+	)
+	await client.change(uri, "port: Int(this > 0) = 80", 2)
+	expect((await client.wait(uri, 2)).diagnostics).toEqual([])
 })
