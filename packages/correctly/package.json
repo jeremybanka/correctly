@@ -69,7 +69,7 @@
 		"@types/node": "26.6.5",
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.140.0",
-		"breakage": "0.8.4"
+		"breakage": "0.8.5"
 	},
 	"engines": {
 		"node": ">=22.18.0"
