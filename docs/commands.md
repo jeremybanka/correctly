@@ -1,6 +1,6 @@
 # Repository commands
 
-Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node 26.12.1 and pnpm 12.14.0. Published runtime code targets Node 22.18 or later.
+Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node 26.12.1 and pnpm 12.15.0. Published runtime code targets Node 22.18 or later.
 
 | Command             | Contract                                                                                                                                                                    |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
