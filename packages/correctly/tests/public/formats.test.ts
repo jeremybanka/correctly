@@ -414,7 +414,7 @@ test.each(["yaml", "toml"] as const)(
 	},
 )
 
-test.each(["yaml", "toml"] as const)(
+test.each(["yaml", "toml", "pkl"] as const)(
 	"%s reports missing editor configuration with the correct parser ID",
 	async (mode) => {
 		const root = await temp()

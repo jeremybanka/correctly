@@ -1,4 +1,5 @@
 import path from "node:path"
+import { cp } from "node:fs/promises"
 import { rolldown } from "rolldown"
 
 export async function bundleEditor(
@@ -7,6 +8,8 @@ export async function bundleEditor(
 	entries: readonly (readonly [string, string])[],
 	sourcemap = true,
 ): Promise<void> {
+	for (const asset of ["pklr.wasm", "pklr.LICENSE"])
+		await cp(path.join(packageRoot, "src/core", asset), path.join(dist, asset))
 	for (const [entry, outfile] of entries) {
 		const bundle = await rolldown({
 			input: path.join(packageRoot, `src/${entry}.ts`),

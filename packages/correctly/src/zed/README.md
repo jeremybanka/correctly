@@ -1,6 +1,6 @@
 # Correctly for Zed
 
-Install Correctly and any imported adapters in the project, add `correctly.config.ts`, and enable the extension only in projects you trust. It executes that configuration and its imports. JSON, JSONC, YAML, and TOML receive diagnostics; completion and hover currently support JSON/JSONC only. Zed's existing language support handles syntax highlighting and formatting.
+Install Correctly and any imported adapters in the project, add `correctly.config.ts`, and enable the extension only in projects you trust. It executes that configuration and its imports. JSON, JSONC, YAML, TOML, and PKL receive diagnostics; completion and hover currently support JSON/JSONC only. Zed's existing language support handles syntax highlighting and formatting.
 
 ## Build and sideload
 
@@ -27,14 +27,15 @@ Add the following to your trusted project's `.zed/settings.json`. Retain other s
 		"JSON": { "language_servers": ["correctly", "..."] },
 		"JSONC": { "language_servers": ["correctly", "..."] },
 		"YAML": { "language_servers": ["correctly", "..."] },
-		"TOML": { "language_servers": ["correctly", "..."] }
+		"TOML": { "language_servers": ["correctly", "..."] },
+		"Pkl": { "language_servers": ["correctly", "..."] }
 	}
 }
 ```
 
-Other servers may report their own diagnostics or suggestions. To use only Correctly's language server for a language, use `["correctly"]`. This preserves Zed's syntax support but removes the other servers' features. Correctly provides no formatter or automatic fixes; keep your formatter configured separately. Ensure YAML and TOML language support is installed if Zed does not recognize those files.
+Other servers may report their own diagnostics or suggestions. To use only Correctly's language server for a language, use `["correctly"]`. This preserves Zed's syntax support but removes the other servers' features. Correctly provides no formatter or automatic fixes; keep your formatter configured separately. Ensure YAML, TOML, and Pkl language support is installed if Zed does not recognize those files.
 
-The bundled server uses project-local configuration imports, so install `correctly` and any adapters imported by `correctly.config.ts` in the project. Data and schema buffers update as you type. Executable configurations and their imports reload after saving; the LSP registers file watchers for disk changes. Zed attaches Correctly to the four registered languages; custom parser file types need a corresponding language association before they can receive editor diagnostics.
+The bundled server uses project-local configuration imports, so install `correctly` and any adapters imported by `correctly.config.ts` in the project. Data and schema buffers update as you type. Executable configurations and their imports reload after saving; the LSP registers file watchers for disk changes. Zed attaches Correctly to the five registered languages; custom parser file types need a corresponding language association before they can receive editor diagnostics.
 
 ## Runtime override and updates
 

@@ -9,4 +9,4 @@ pnpm = "12.15.0"
 [tools.rust]
 version = "1.99.1"
 components = ["rustfmt"]
-targets = ["wasm32-wasip2"]
+targets = ["wasm32-wasip2", "wasm32-unknown-unknown"]

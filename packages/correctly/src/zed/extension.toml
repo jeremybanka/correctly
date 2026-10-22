@@ -10,11 +10,12 @@ repository = "https://github.com/jeremybanka/correctly"
 # without attempting to compile Rust on the recipient's machine.
 [language_servers.correctly]
 name = "Correctly"
-languages = ["JSON", "JSONC", "YAML", "TOML"]
-opt_in_languages = ["JSON", "JSONC", "YAML", "TOML"]
+languages = ["JSON", "JSONC", "YAML", "TOML", "Pkl"]
+opt_in_languages = ["JSON", "JSONC", "YAML", "TOML", "Pkl"]
 
 [language_servers.correctly.language_ids]
 JSON = "json"
 JSONC = "jsonc"
 YAML = "yaml"
 TOML = "toml"
+Pkl = "pkl"

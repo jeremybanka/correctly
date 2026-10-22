@@ -44,6 +44,11 @@ impl zed::Extension for Correctly {
                 "worker.mjs",
                 include_bytes!("../dist/worker.mjs").as_slice(),
             ),
+            ("pklr.wasm", include_bytes!("../dist/pklr.wasm").as_slice()),
+            (
+                "pklr.LICENSE",
+                include_bytes!("../dist/pklr.LICENSE").as_slice(),
+            ),
         ] {
             fs::write(dist.join(name), bytes).map_err(|error| error.to_string())?;
         }
