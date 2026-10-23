@@ -151,15 +151,16 @@
 		},
 		{
 			"matchPackageNames": [
-				"agents.yaml",
-				"atom.io",
-				"break-check",
 				"breakage",
 				"comline",
 				"takua",
 				"treetrunks"
 			],
-			"minimumReleaseAge": null
+			"minimumReleaseAge": null,
+			"matchDatasources": [
+				"npm"
+			],
+			"description": "Exempt consumed jeremybanka packages at every version; keep aligned with pnpm-workspace.yaml"
 		},
 		{
 			"description": "Historical Schemars contracts and probe helper dependencies are immutable audit inputs",
