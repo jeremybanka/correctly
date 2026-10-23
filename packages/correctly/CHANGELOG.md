@@ -1,5 +1,11 @@
 # correctly
 
+## 0.3.2
+
+### Patch Changes
+
+- a54e9f0: Improve VS Code language server startup, shutdown, document synchronization, and file watcher cleanup by updating the language client and server to v11.
+
 ## 0.3.1
 
 ### Patch Changes
