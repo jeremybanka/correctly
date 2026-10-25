@@ -221,8 +221,8 @@ importers:
         specifier: 3.0.1
         version: 3.0.1(ajv@8.20.0)
       comline:
-        specifier: 0.9.1
-        version: 0.9.1(arktype@2.2.8)(zod@4.6.7)
+        specifier: 0.9.3
+        version: 0.9.3(arktype@2.2.8)(zod@4.6.7)
       ignore:
         specifier: 7.0.14
         version: 7.0.14
@@ -1610,8 +1610,8 @@ packages:
       zod:
         optional: true
 
-  comline@0.9.1:
-    resolution: {integrity: sha512-RbB0sJLMiTHe02VpHLK3RmXUk9Y/Jw5H35yx9X8rVWM7SQKDaSJ6AgIY1TbjhbduXhPrJEeiBbInvuYep5I9jw==}
+  comline@0.9.3:
+    resolution: {integrity: sha512-xtcKmn8iWGrkbet9qamn+Se3p9Fef2GSuOFKAq0AAx5tPFtB0kWLW+X1WkIHHDuPSpu5goVoffc5+6YHMvx/kQ==}
     peerDependencies:
       arktype: ^2.1.28
       zod: ^4.2.0
@@ -3417,7 +3417,7 @@ snapshots:
       arktype: 2.2.8
       zod: 4.6.7
 
-  comline@0.9.1(arktype@2.2.8)(zod@4.6.7):
+  comline@0.9.3(arktype@2.2.8)(zod@4.6.7):
     dependencies:
       '@standard-schema/spec': 1.1.0
       treetrunks: 0.1.13
