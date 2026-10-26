@@ -1,4 +1,8 @@
-import { defineConfig, json } from "./packages/correctly/src/core/index.ts"
+import {
+	defineConfig,
+	json,
+	type ProjectConfig,
+} from "./packages/correctly/src/core/index.ts"
 import { ajv } from "./packages/correctly/src/validators/ajv.ts"
 import { renovate } from "./packages/correctly/src/extensions/renovate.ts"
 
@@ -11,7 +15,7 @@ const schemastore = {
 	],
 }
 
-export default defineConfig({
+const config: ProjectConfig = defineConfig({
 	files: ["**/*.json", "**/*.jsonc"],
 	exclude: ["**/tests/public/fixtures/**"],
 	associations: [
@@ -21,13 +25,15 @@ export default defineConfig({
 			parse: json(),
 			validate: ajv({ schema: "node_modules/@changesets/config/schema.json" }),
 		},
-		...(["correctly", "schemars"] as const).map((name) => ({
-			name: `breakage (${name})`,
-			files: [`packages/${name}/breakage.config.json`],
+
+		{
+			name: "breakage (schemars)",
+			files: ["packages/schemars/breakage.config.json"],
 			validate: ajv({
-				schema: `packages/${name}/node_modules/breakage/dist/breakage.main.schema.json`,
+				schema:
+					"packages/schemars/node_modules/breakage/dist/breakage.main.schema.json",
 			}),
-		})),
+		},
 		{
 			name: "Package manifests",
 			files: ["**/package.json"],
@@ -68,3 +74,5 @@ export default defineConfig({
 		},
 	],
 })
+
+export default config

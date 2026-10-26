@@ -42,7 +42,7 @@
 		"build:zed": "node src/cli/zed.ts",
 		"test": "vp test",
 		"test:public": "vp test tests/public",
-		"test:breakage": "node scripts/check-breakage.ts",
+		"test:breakage": "pnpm -w prepare:peers && breakage",
 		"test:private": "vp test tests/private",
 		"test:watch": "vp test watch",
 		"test:distribution": "vp test --config vite.distribution.config.ts"
@@ -69,7 +69,6 @@
 		"@types/node": "26.6.5",
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.140.0",
-		"breakage": "0.8.5",
 		"schemars-released": "npm:@correctlyjs/schemars@0.0.5"
 	},
 	"engines": {

@@ -6,3 +6,4 @@ artifacts/
 *.log
 *.vsix
 target/
+packages/correctly/peer-environments/schemars/test/
