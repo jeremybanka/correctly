@@ -1,5 +1,11 @@
 # correctly
 
+## 0.3.3
+
+### Patch Changes
+
+- 4e0b2d4: Keep Correctly extension contracts independent and preserve Schemars era semantics through package-owned public contracts and released/candidate Correctly peer environments.
+
 ## 0.3.2
 
 ### Patch Changes
