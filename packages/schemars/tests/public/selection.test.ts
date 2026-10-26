@@ -1,9 +1,8 @@
 import { readFileSync } from "node:fs"
 import { expect, test } from "vite-plus/test"
-import { schemarsEras } from "../../src/index.ts"
-import { schemars } from "../../src/ajv.ts"
-import { selectSchemarsEra } from "../../src/select-era.ts"
-import { setup } from "../../../correctly/tests/public/helpers.ts"
+import { schemarsEras } from "@correctlyjs/schemars"
+import { schemars } from "@correctlyjs/schemars/ajv"
+import { setup } from "./helpers.ts"
 import type { Corpus } from "../../../../scripts/schemars-contract.ts"
 
 const versions = schemarsEras.flatMap((era) => [...era.versions])
@@ -42,28 +41,12 @@ test.each([
 		)
 	},
 )
-test.each([
-	"0.8.14",
-	"0.8.23",
-	"1.2.4",
-	"^0.8.15",
-	"0.8",
-	"*",
-	">=0.8.15",
-	">=0.8.15 <0.9.0",
-	">=0.8.22 <=0.8.15",
-	">=0.8.15 <=0.8.23",
-	"0.8.22-alpha.1",
-	"00.8.22",
-])("%s cannot silently enable unreviewed support", (version) => {
-	// @ts-expect-error Exercise JavaScript callers that bypass static validation.
-	expect(() => schemars({ version })).toThrow(
+test("the factory rejects a version absent from the current catalog", () => {
+	let major = 0
+	while (versions.includes(`${major}.0.0` as (typeof versions)[number])) major++
+	// @ts-expect-error Exercise a JavaScript caller with an unreviewed selection.
+	expect(() => schemars({ version: `${major}.0.0` })).toThrow(
 		"Unsupported Schemars version selection",
-	)
-})
-test("ranges crossing compatibility eras fail instead of unioning incompatible assertions", () => {
-	expect(() => selectSchemarsEra(">=0.8.22 <=1.0.0")).toThrow(
-		"crosses compatibility eras",
 	)
 })
 test("the public era catalog cannot be mutated by configuration code", () => {

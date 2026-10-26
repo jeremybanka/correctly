@@ -103,7 +103,7 @@ jobs:
 
   Test:
     if: ${{ always() }}
-    needs: [Core, Schemars, Distribution]
+    needs: [Core, Schemars, Distribution, Breakage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:

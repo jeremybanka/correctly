@@ -2,7 +2,7 @@
 
 Schemars format assertions for [Correctly](https://www.npmjs.com/package/correctly), with independently reviewed compatibility eras.
 
-Install `correctly` and `@correctlyjs/schemars` in the project. Correctly 0.1.x provides the supported validator API; Node 22.18 or later is required.
+Install `correctly` and `@correctlyjs/schemars` in the project. The `correctly` peer dependency declares the supported validator API versions; Node 22.18 or later is required.
 
 ```ts
 import { defineConfig } from "correctly"

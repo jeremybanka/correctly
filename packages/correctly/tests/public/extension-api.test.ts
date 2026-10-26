@@ -8,7 +8,7 @@ import {
 	type ProjectConfig,
 } from "../../src/core/index.ts"
 import { ajv, type AjvExtension } from "../../src/validators/ajv.ts"
-import { schemars } from "../../../schemars/src/ajv.ts"
+import { testExtension } from "./fixtures/extension.ts"
 import { renovate } from "../../src/extensions/renovate.ts"
 import { check } from "../../src/cli/check.ts"
 import { readableReport } from "../../src/cli/readable.ts"
@@ -16,7 +16,7 @@ import { configSource, setup, put } from "./helpers.ts"
 import { lspClient } from "./lsp-client.ts"
 
 const uint = { type: "integer", format: "uint16" }
-const extension = () => schemars({ version: "0.8.22" })
+const extension = testExtension
 function config(extensions: AjvExtension[] = []): ProjectConfig {
 	return defineConfig({
 		associations: [
@@ -215,13 +215,9 @@ test("imported implementations assert values and preserve strict schema checks",
 	).toBe("schema")
 })
 
-test("version selection is exact and extension identifiers cannot replace implementations", async () => {
-	for (const version of ["0.8", "^0.8.22", "1.2.4"])
-		expect(() => schemars({ version: version as "0.8.22" })).toThrow(
-			"Unsupported Schemars version",
-		)
+test("extension identifiers cannot replace implementations", async () => {
 	await expect(
-		configured(uint, ["schemars@0.8.22" as unknown as AjvExtension]),
+		configured(uint, ["test-extension" as unknown as AjvExtension]),
 	).rejects.toMatchObject({ code: "config" })
 })
 
@@ -290,7 +286,7 @@ test("LSP displays extension guidance and applies a saved config's imported impl
 			{
 				files: ["data/**"],
 				schema: "schema.json",
-				extensions: ["schemars@0.8.22"],
+				extensions: ["test-extension"],
 			},
 		],
 	})

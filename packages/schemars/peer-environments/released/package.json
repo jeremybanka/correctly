@@ -1,0 +1,12 @@
+{
+	"name": "schemars-released-correctly-contracts",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"correctly": "0.3.0"
+	},
+	"devDependencies": {
+		"vite-plus": "1.4.0"
+	}
+}

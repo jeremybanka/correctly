@@ -30,6 +30,12 @@
 	],
 	"packageRules": [
 		{
+			"description": "Frozen peer environments change only with reviewed compatibility contracts",
+			"matchFileNames": ["packages/schemars/peer-environments/**"],
+			"enabled": false
+		},
+
+		{
 			"matchPackageNames": [
 				"jdx/mise"
 			],
@@ -152,6 +158,7 @@
 		{
 			"matchPackageNames": [
 				"breakage",
+				"@breakage/*",
 				"comline",
 				"takua",
 				"treetrunks"

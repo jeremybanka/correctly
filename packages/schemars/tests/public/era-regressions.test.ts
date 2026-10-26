@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { expect, test } from "vite-plus/test"
-import { setup } from "../../../correctly/tests/public/helpers.ts"
+import { setup } from "./helpers.ts"
 import type { Corpus } from "../../../../scripts/schemars-contract.ts"
 
 test("1.2 enum maps permit empty maps while rejecting unknown keys", async () => {

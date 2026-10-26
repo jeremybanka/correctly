@@ -13,10 +13,6 @@ test("Changesets releases compatible core and extension updates independently", 
 	)
 	const root = fileURLToPath(new URL("../../../../", import.meta.url))
 	const packages = await getPackages(root)
-	// Model the first published versions without changing working-tree manifests.
-	for (const pkg of packages.packages)
-		pkg.packageJson.version =
-			pkg.packageJson.name === "correctly" ? "0.1.0" : "0.0.1"
 	const { config } = await readConfig(root, packages)
 	for (const name of ["@correctlyjs/schemars", "correctly"]) {
 		const plan = assembleReleasePlan(

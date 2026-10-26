@@ -386,7 +386,7 @@ describe("bundled distribution", () => {
 				{
 					files: ["data/**"],
 					schema: "schema.json",
-					extensions: ["schemars@0.8.22"],
+					extensions: ["test-extension"],
 				},
 			],
 		}

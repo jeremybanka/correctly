@@ -23,20 +23,21 @@ export default defineConfig({
 })
 
 // Never executed: invalid calls deliberately test the consumer's compile errors.
-export function configurationTypes(dynamic: string): AjvExtension[] {
+export function configurationTypes(
+	dynamic: string,
+	unreviewed: `${number}.${number}.${number}`,
+): AjvExtension[] {
 	const since: "0.8.15" = schemarsEras[0].since
 	const era: SchemarsEra = schemarsEras[0]
 	const exact: SchemarsVersion = era.versions[7]
 	const range = ">=0.8.17 <=0.8.20" satisfies SchemarsVersionSelection
 
 	// @ts-expect-error Unsupported exact releases require a new package release.
-	schemars({ version: "0.8.23" })
-	// @ts-expect-error The next patch is not reviewed implicitly.
-	schemars({ version: "1.2.4" })
+	schemars({ version: unreviewed })
 	// @ts-expect-error Unknown upper bounds cannot extend support implicitly.
-	schemars({ version: ">=0.8.15 <=0.8.23" })
+	schemars({ version: `>=0.8.15 <=${unreviewed}` })
 	// @ts-expect-error Unknown lower bounds cannot extend support implicitly.
-	schemars({ version: ">=0.8.14 <=0.8.22" })
+	schemars({ version: `>=${unreviewed} <=0.8.22` })
 	// @ts-expect-error Both endpoints exist, but reversed bounds are invalid.
 	schemars({ version: ">=0.8.22 <=0.8.15" })
 	// @ts-expect-error Open ranges are not reviewed selections.
@@ -54,7 +55,7 @@ export function configurationTypes(dynamic: string): AjvExtension[] {
 	// @ts-expect-error Arbitrary strings are not proof of reviewed support.
 	schemars({ version: dynamic })
 	// @ts-expect-error Only declared era identifiers exist in the public type.
-	const unknownEra: SchemarsEra["since"] = "0.8.23"
+	const unknownEra: SchemarsEra["since"] = unreviewed
 	// @ts-expect-error Catalog tuples stay readonly for consumers.
 	era.versions.push(unknownEra)
 

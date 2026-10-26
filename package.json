@@ -21,7 +21,9 @@
 		"test:distribution": "vp run -r test:distribution",
 		"test:schemars": "node scripts/check-schemars.ts",
 		"test:public": "pnpm -r test:public",
-		"test:breakage": "pnpm -r test:breakage"
+		"test:breakage": "pnpm -r test:breakage",
+		"test:peers": "pnpm --filter @correctlyjs/schemars test:peers",
+		"prepare:peers": "pnpm build && pnpm -C packages/correctly pack --out ../../artifacts/correctly.tgz && pnpm -C packages/schemars pack --out ../../artifacts/schemars.tgz"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

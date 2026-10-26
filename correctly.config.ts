@@ -21,13 +21,7 @@ export default defineConfig({
 			parse: json(),
 			validate: ajv({ schema: "node_modules/@changesets/config/schema.json" }),
 		},
-		...(["correctly", "schemars"] as const).map((name) => ({
-			name: `breakage (${name})`,
-			files: [`packages/${name}/breakage.config.json`],
-			validate: ajv({
-				schema: `packages/${name}/node_modules/breakage/dist/breakage.main.schema.json`,
-			}),
-		})),
+
 		{
 			name: "Package manifests",
 			files: ["**/package.json"],

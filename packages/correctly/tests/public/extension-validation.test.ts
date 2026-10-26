@@ -11,7 +11,7 @@ function compatibility(schema: unknown) {
 			{
 				files: ["data/**"],
 				schema: "schema.json",
-				extensions: ["schemars@0.8.22", "renovate"],
+				extensions: ["test-extension", "renovate"],
 			},
 		],
 	})
