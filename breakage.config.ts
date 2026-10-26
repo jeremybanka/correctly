@@ -26,7 +26,8 @@ export default {
 				command:
 					[
 						"cp -R node_modules/correctly/. packages/correctly/",
-						"ln -s ../../node_modules/@correctlyjs/schemars packages/schemars",
+						"mkdir -p packages/schemars/src",
+						"cp packages/correctly/tests/public/fixtures/legacy-schemars.ts packages/schemars/src/ajv.ts",
 						"ln -s ../../node_modules/@correctlyjs/schemars node_modules/schemars-released",
 						"cd packages/correctly",
 					].join(" && ") + " || exit 2; vp test tests/public",
