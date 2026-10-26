@@ -1,12 +1,8 @@
 {
 	"name": "correctly-workspace",
-	"version": "0.0.0",
 	"private": true,
 	"license": "MPL-2.0",
 	"type": "module",
-	"files": [
-		"package.json"
-	],
 	"scripts": {
 		"build": "vp run -r build",
 		"build:vsix": "pnpm -r build:vsix",
@@ -26,8 +22,8 @@
 		"test:schemars": "node scripts/check-schemars.ts",
 		"test:public": "pnpm -r test:public",
 		"test:breakage": "pnpm -r test:breakage",
-		"test:peers": "pnpm prepare:peers && breakage npm test --representative packages/correctly/peer-environments/schemars",
-		"prepare:peers": "pnpm --filter correctly build && pnpm -C packages/correctly pack --out ../../artifacts/correctly.tgz && pnpm pack --out artifacts/contracts.tgz"
+		"test:peers": "pnpm --filter @correctlyjs/schemars test:peers",
+		"prepare:peers": "pnpm build && pnpm -C packages/correctly pack --out ../../artifacts/correctly.tgz && pnpm -C packages/schemars pack --out ../../artifacts/schemars.tgz"
 	},
 	"devDependencies": {
 		"@breakage/changesets": "0.1.0",
@@ -43,9 +39,6 @@
 		"dprint-plugin-yaml": "0.6.0",
 		"typescript": "7.0.2",
 		"vite-plus": "catalog:"
-	},
-	"peerDependencies": {
-		"correctly": "^0.3.2"
 	},
 	"packageManager": "pnpm@12.15.0",
 	"engines": {

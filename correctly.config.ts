@@ -27,14 +27,6 @@ const config: ProjectConfig = defineConfig({
 		},
 
 		{
-			name: "breakage (schemars)",
-			files: ["packages/schemars/breakage.config.json"],
-			validate: ajv({
-				schema:
-					"packages/schemars/node_modules/breakage/dist/breakage.main.schema.json",
-			}),
-		},
-		{
 			name: "Package manifests",
 			files: ["**/package.json"],
 			validate: ajv({

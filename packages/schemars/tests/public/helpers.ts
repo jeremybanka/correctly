@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { afterEach } from "vite-plus/test"
-import { Engine, loadProject } from "../../../correctly/src/core/index.ts"
+import { Engine, loadProject } from "correctly"
 
 const temporary: string[] = []
 afterEach(async () => {
@@ -41,13 +41,9 @@ export type TestConfig = {
 // Exercise executable configuration against both current workspace packages.
 export async function setup(schema: unknown, config: TestConfig) {
 	const root = await temp()
-	const core = new URL("../../../correctly/src/core/index.ts", import.meta.url)
-		.href
-	const adapter = new URL(
-		"../../../correctly/src/validators/ajv.ts",
-		import.meta.url,
-	).href
-	const extension = new URL("../../src/ajv.ts", import.meta.url).href
+	const core = import.meta.resolve("correctly")
+	const adapter = import.meta.resolve("correctly/validators/ajv")
+	const extension = import.meta.resolve("@correctlyjs/schemars/ajv")
 	const rules = config.associations.map(
 		({ schema, extensions, ...rule }) => `{
 		...${JSON.stringify(rule)},

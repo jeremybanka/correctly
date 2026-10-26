@@ -29,18 +29,18 @@
 	],
 	"scripts": {
 		"build": "vp pack",
-		"test": "vp test",
-		"test:public": "vp test tests/public",
-		"test:breakage": "breakage",
-		"test:watch": "vp test watch",
-		"test:distribution": "vp test --config vite.distribution.config.ts"
+		"test": "pnpm -w build && vp test",
+		"test:public": "pnpm -w build && vp test tests/public",
+		"test:breakage": "pnpm -w prepare:peers && breakage && breakage npm check",
+		"test:watch": "pnpm -w build && vp test watch",
+		"test:distribution": "vp test --config vite.distribution.config.ts",
+		"test:peers": "pnpm -w prepare:peers && breakage npm check"
 	},
 	"devDependencies": {
-		"breakage": "0.8.5",
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {
-		"correctly": "^0.3.2"
+		"correctly": "^0.3.0"
 	},
 	"engines": {
 		"node": ">=22.18.0"

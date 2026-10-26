@@ -1,5 +1,6 @@
 ---
 "correctly": patch
+"@correctlyjs/schemars": patch
 ---
 
-Test Correctly compatibility against an exact published Schemars extension and preserve released dependency versions during historical replay.
+Keep Correctly extension contracts independent and preserve Schemars era semantics through package-owned public contracts and released/candidate Correctly peer environments.
