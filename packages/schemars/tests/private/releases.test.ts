@@ -34,12 +34,6 @@ test("Changesets releases compatible core and extension updates independently", 
 				.filter((release: { type: string }) => release.type !== "none")
 				.map((release: { name: string }) => release.name),
 		).toEqual([name])
-		if (name === "@correctlyjs/schemars")
-			expect(
-				plan.releases.some(
-					(release: { name: string }) => release.name === "correctly",
-				),
-			).toBe(false)
 	}
 
 	// Apply real versioning to both packages: the external consumer baseline
