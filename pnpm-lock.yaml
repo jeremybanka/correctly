@@ -272,6 +272,9 @@ importers:
       breakage:
         specifier: 0.8.5
         version: 0.8.5(zod@4.6.7)
+      schemars-released:
+        specifier: npm:@correctlyjs/schemars@0.0.5
+        version: '@correctlyjs/schemars@0.0.5(correctly@packages+correctly)'
 
   packages/schemars:
     devDependencies:
@@ -421,6 +424,12 @@ packages:
   '@clack/prompts@1.8.1':
     resolution: {integrity: sha512-dlT1m5e/0yUL0kRNcQn7yGLVThkgbB0Ga/1AmfDDC/8ik6AIiSf2QLQO2zPYvefsHP0aFgxO93cVLCCfDp7kzQ==}
     engines: {node: '>= 20.12.0'}
+
+  '@correctlyjs/schemars@0.0.5':
+    resolution: {integrity: sha512-NwcuVHf6WopzynOkxRSaMzVK7ekvT2I6l1imMorzRmEfhlvqpXmRByAsag/+Car7E9wBsnhBE/Dh91D/I8fPOw==}
+    engines: {node: '>=22.18.0'}
+    peerDependencies:
+      correctly: ^0.3.0
 
   '@dprint/android-arm64@0.64.3':
     resolution: {integrity: sha512-cRSS8GTClq/xDF3VBFAvkBwO4a0cwovwfUCyMhzKDIVvPOYr8A7zDd3fKoYfU4oCpEGZ4oFBhAw84S3ia1IRSA==}
@@ -2567,6 +2576,10 @@ snapshots:
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
+
+  '@correctlyjs/schemars@0.0.5(correctly@packages+correctly)':
+    dependencies:
+      correctly: link:packages/correctly
 
   '@dprint/android-arm64@0.64.3':
     optional: true

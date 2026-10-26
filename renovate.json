@@ -30,6 +30,12 @@
 	],
 	"packageRules": [
 		{
+			"description": "Correctly's published Schemars dependency is a reviewed consumer-compatibility baseline",
+			"matchFileNames": ["packages/correctly/package.json"],
+			"matchPackageNames": ["@correctlyjs/schemars", "schemars-released"],
+			"enabled": false
+		},
+		{
 			"matchPackageNames": [
 				"jdx/mise"
 			],

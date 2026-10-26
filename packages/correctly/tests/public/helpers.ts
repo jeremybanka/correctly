@@ -49,10 +49,7 @@ export function configSource(config: TestConfig, built = false): string {
 		built ? "../../dist/ajv.mjs" : "validators/ajv.ts",
 		built ? import.meta.url : source,
 	).href
-	const extension = new URL(
-		built ? "../../../schemars/dist/ajv.mjs" : "../../../schemars/src/ajv.ts",
-		import.meta.url,
-	).href
+	const extension = import.meta.resolve("schemars-released/ajv")
 	const renovate = new URL(
 		built ? "../../dist/renovate.mjs" : "extensions/renovate.ts",
 		built ? import.meta.url : source,

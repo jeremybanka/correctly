@@ -8,7 +8,7 @@ import {
 	type ProjectConfig,
 } from "../../src/core/index.ts"
 import { ajv, type AjvExtension } from "../../src/validators/ajv.ts"
-import { schemars } from "../../../schemars/src/ajv.ts"
+import { schemars } from "schemars-released/ajv"
 import { renovate } from "../../src/extensions/renovate.ts"
 import { check } from "../../src/cli/check.ts"
 import { readableReport } from "../../src/cli/readable.ts"

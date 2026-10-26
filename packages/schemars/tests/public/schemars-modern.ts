@@ -1,10 +1,7 @@
 import { readFileSync } from "node:fs"
 import { expect, test } from "vite-plus/test"
 import { schemarsEras, type SchemarsEra } from "../../src/eras.ts"
-import {
-	setup,
-	type TestConfig,
-} from "../../../correctly/tests/public/helpers.ts"
+import { setup, type TestConfig } from "./helpers.ts"
 import { cases, formatsIn } from "./schemars-cases.ts"
 import type { Corpus } from "../../../../scripts/schemars-contract.ts"
 

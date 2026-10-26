@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test"
 import { schemarsEras } from "../../src/index.ts"
 import { schemars } from "../../src/ajv.ts"
 import { selectSchemarsEra } from "../../src/select-era.ts"
-import { setup } from "../../../correctly/tests/public/helpers.ts"
+import { setup } from "./helpers.ts"
 import type { Corpus } from "../../../../scripts/schemars-contract.ts"
 
 const versions = schemarsEras.flatMap((era) => [...era.versions])

@@ -1,6 +1,11 @@
 packages:
   - packages/*
 
+# Exact registry dependencies must stay published packages, even when a sibling
+# workspace has the same name. Workspace consumers opt in with workspace:*.
+linkWorkspacePackages: false
+preferWorkspacePackages: false
+
 allowBuilds:
   "@vscode/vsce-sign": false
   dprint: true

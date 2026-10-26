@@ -1,7 +1,7 @@
 {
 	"tagPattern": "refs/tags/correctly@",
-	"testPattern": "{packages/correctly/tests/public/**/*,packages/schemars/src/eras.ts}",
-	"testCommand": "pnpm -C packages/correctly test:public",
+	"testPattern": "packages/correctly/tests/public/**/*",
+	"testCommand": "node packages/correctly/scripts/replay-public.ts",
 	"certifyCommand": "grep -q -F '\"correctly\": minor' .changeset/*.md",
 	"baseDirname": "../.."
 }
