@@ -175,9 +175,6 @@ importers:
 
   .:
     devDependencies:
-      '@breakage/changesets':
-        specifier: 0.1.0
-        version: 0.1.0(breakage@0.10.0(zod@4.6.7))
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
@@ -196,9 +193,6 @@ importers:
       '@dprint/toml':
         specifier: 0.9.0
         version: 0.9.0
-      breakage:
-        specifier: 0.10.0
-        version: 0.10.0(zod@4.6.7)
       correctly:
         specifier: workspace:*
         version: link:packages/correctly
@@ -266,6 +260,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@breakage/changesets':
+        specifier: 0.1.0
+        version: 0.1.0(breakage@0.10.0(zod@4.6.7))
       '@types/node':
         specifier: 26.6.5
         version: 26.6.5
@@ -275,9 +272,18 @@ importers:
       '@types/vscode':
         specifier: 1.140.0
         version: 1.140.0
+      breakage:
+        specifier: 0.10.0
+        version: 0.10.0(zod@4.6.7)
 
   packages/schemars:
     devDependencies:
+      '@breakage/changesets':
+        specifier: 0.1.0
+        version: 0.1.0(breakage@0.10.0(zod@4.6.7))
+      breakage:
+        specifier: 0.10.0
+        version: 0.10.0(zod@4.6.7)
       correctly:
         specifier: workspace:*
         version: link:../correctly

@@ -37,6 +37,8 @@
 		"test:peers": "pnpm -w prepare:peers && breakage npm check"
 	},
 	"devDependencies": {
+		"@breakage/changesets": "0.1.0",
+		"breakage": "0.10.0",
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {
