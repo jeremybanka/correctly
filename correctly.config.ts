@@ -1,8 +1,4 @@
-import {
-	defineConfig,
-	json,
-	type ProjectConfig,
-} from "./packages/correctly/src/core/index.ts"
+import { defineConfig, json } from "./packages/correctly/src/core/index.ts"
 import { ajv } from "./packages/correctly/src/validators/ajv.ts"
 import { renovate } from "./packages/correctly/src/extensions/renovate.ts"
 
@@ -15,7 +11,7 @@ const schemastore = {
 	],
 }
 
-const config: ProjectConfig = defineConfig({
+export default defineConfig({
 	files: ["**/*.json", "**/*.jsonc"],
 	exclude: ["**/tests/public/fixtures/**"],
 	associations: [
@@ -66,5 +62,3 @@ const config: ProjectConfig = defineConfig({
 		},
 	],
 })
-
-export default config
