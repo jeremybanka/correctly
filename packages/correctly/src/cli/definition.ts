@@ -8,6 +8,7 @@ import {
 	type CommandLineInterface,
 	type CompletionTargetFormat,
 	type OptionsGroup,
+	type OptionsSchema,
 } from "comline"
 import { z } from "zod/v4"
 
@@ -28,9 +29,9 @@ const checkOptionsSchema = z.strictObject({
 })
 type CheckOptions = z.infer<typeof checkOptionsSchema>
 
-const checkOptions = options<CheckOptions>(
+const checkOptions = options(
 	"Validate discovered files or the supplied files.",
-	checkOptionsSchema,
+	checkOptionsSchema satisfies OptionsSchema<CheckOptions>,
 	{
 		config: {
 			flag: "c",
@@ -63,9 +64,9 @@ const pullOptionsSchema = checkOptionsSchema.extend({
 	all: z.boolean().optional(),
 })
 type PullOptions = z.infer<typeof pullOptionsSchema>
-const pullOptions = options<PullOptions>(
+const pullOptions = options(
 	"Vendor configured schemas and their references (requires online mode).",
-	pullOptionsSchema,
+	pullOptionsSchema satisfies OptionsSchema<PullOptions>,
 	{
 		...checkOptions.optionConfigs,
 		association: {
@@ -94,9 +95,9 @@ const vsixOptionsSchema = z.strictObject({
 	help: z.boolean().optional(),
 })
 type VsixOptions = z.infer<typeof vsixOptionsSchema>
-const vsixOptions = options<VsixOptions>(
+const vsixOptions = options(
 	"Build and install the bundled VS Code extension.",
-	vsixOptionsSchema,
+	vsixOptionsSchema satisfies OptionsSchema<VsixOptions>,
 	{
 		"build-only": {
 			example: "--build-only",
