@@ -38,7 +38,7 @@
 	},
 	"devDependencies": {
 		"@breakage/changesets": "0.1.0",
-		"breakage": "0.10.0",
+		"breakage": "0.10.1",
 		"correctly": "workspace:*"
 	},
 	"peerDependencies": {
