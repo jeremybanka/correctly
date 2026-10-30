@@ -69,7 +69,7 @@
 		"@breakage/changesets": "0.1.0",
 		"@types/node": "26.6.6",
 		"@types/picomatch": "4.0.3",
-		"@types/vscode": "1.140.0",
+		"@types/vscode": "1.144.0",
 		"breakage": "0.10.1"
 	},
 	"engines": {
