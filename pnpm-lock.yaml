@@ -262,7 +262,7 @@ importers:
     devDependencies:
       '@breakage/changesets':
         specifier: 0.1.0
-        version: 0.1.0(breakage@0.10.1(zod@4.6.7))
+        version: 0.1.0(breakage@0.10.2(zod@4.6.7))
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6
@@ -273,17 +273,17 @@ importers:
         specifier: 1.144.0
         version: 1.144.0
       breakage:
-        specifier: 0.10.1
-        version: 0.10.1(zod@4.6.7)
+        specifier: 0.10.2
+        version: 0.10.2(zod@4.6.7)
 
   packages/schemars:
     devDependencies:
       '@breakage/changesets':
         specifier: 0.1.0
-        version: 0.1.0(breakage@0.10.1(zod@4.6.7))
+        version: 0.1.0(breakage@0.10.2(zod@4.6.7))
       breakage:
-        specifier: 0.10.1
-        version: 0.10.1(zod@4.6.7)
+        specifier: 0.10.2
+        version: 0.10.2(zod@4.6.7)
       correctly:
         specifier: workspace:*
         version: link:../correctly
@@ -551,8 +551,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@isaacs/nonrecursive-glob-match@1.0.2':
-    resolution: {integrity: sha512-GJPHIgPPtFl+nLhFHyF0zZoFcOFLsZWbHFFzo+Zr+PWDXJbl9hHxb2w+9SiF2fHmLgKaXIpUzQo3SbBBZ9WObw==}
+  '@isaacs/nonrecursive-glob-match@1.0.3':
+    resolution: {integrity: sha512-SI7kyKHq4XXDRozw+r9GlRZkia1ZkFrpLW98r2IC2Bpr8YkFGE3fvjzmxCG0x78A++69HmDNrDvSMYBZmHGpKA==}
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -1582,8 +1582,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  breakage@0.10.1:
-    resolution: {integrity: sha512-cxs6/gBeMl0K/Tt5MVBKn27dajk79hKREGm7Kg4WsTn67phAZD+523n+qyVi5GfhFjLteil6GCGGpal/5Yo7GA==}
+  breakage@0.10.2:
+    resolution: {integrity: sha512-woDmVb3OQpDO185nJVFWLIilqiGq+UZzonp11rl+ICM9ZmoBqQP/qbls0Bvm6g1R4qIzW1muOdkghAuBUJlT8A==}
     hasBin: true
 
   buffer-crc32@0.2.13:
@@ -1965,9 +1965,9 @@ packages:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
 
-  minimatch@11.0.2:
-    resolution: {integrity: sha512-pWTgz5CN3tjqyZNSK2tePlSmu9IwM41q8yn8Usdqqwe9TIHh+9dEpLLjF4uApsfPEAZY71qtSiA2B2APEr+1Yw==}
-    engines: {node: 18 || 20 || >=22}
+  minimatch@11.0.4:
+    resolution: {integrity: sha512-/UJ1dEoVQTjPNDh6SGlUo+ueLMmoHTas4q+8yaAR/5t6nLAIiBDJtoYUh20IYleix7ehiQkgczb84PE3uzHkxg==}
+    engines: {node: 20 || >=22}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -2100,6 +2100,11 @@ packages:
 
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.8.6:
+    resolution: {integrity: sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -2459,14 +2464,14 @@ snapshots:
 
   '@blazediff/core@1.10.0': {}
 
-  '@breakage/changesets@0.1.0(breakage@0.10.1(zod@4.6.7))':
+  '@breakage/changesets@0.1.0(breakage@0.10.2(zod@4.6.7))':
     dependencies:
       '@changesets/assemble-release-plan': 7.0.0
       '@changesets/config': 4.0.1
       '@changesets/pre': 3.0.0
       '@changesets/read': 1.0.1
       '@manypkg/get-packages': 3.1.0
-      breakage: 0.10.1(zod@4.6.7)
+      breakage: 0.10.2(zod@4.6.7)
 
   '@changesets/apply-release-plan@8.1.1':
     dependencies:
@@ -2649,7 +2654,7 @@ snapshots:
   '@dprint/win32-x64@0.64.3':
     optional: true
 
-  '@isaacs/nonrecursive-glob-match@1.0.2': {}
+  '@isaacs/nonrecursive-glob-match@1.0.3': {}
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -3393,12 +3398,12 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  breakage@0.10.1(zod@4.6.7):
+  breakage@0.10.2(zod@4.6.7):
     dependencies:
       arktype: 2.2.9
       comline: 0.9.3(arktype@2.2.9)(zod@4.6.7)
-      minimatch: 11.0.2
-      semver: 7.8.5
+      minimatch: 11.0.4
+      semver: 7.8.6
       simple-git: 4.0.2
       takua: 0.2.3
     transitivePeerDependencies:
@@ -3733,9 +3738,9 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.12
 
-  minimatch@11.0.2:
+  minimatch@11.0.4:
     dependencies:
-      '@isaacs/nonrecursive-glob-match': 1.0.2
+      '@isaacs/nonrecursive-glob-match': 1.0.3
       brace-expansion: 5.0.12
 
   mrmime@2.0.1: {}
@@ -3892,6 +3897,8 @@ snapshots:
   sax@1.6.1: {}
 
   semver@7.8.5: {}
+
+  semver@7.8.6: {}
 
   shell-quote@1.11.0: {}
 
