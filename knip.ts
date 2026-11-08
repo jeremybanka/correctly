@@ -14,6 +14,8 @@ export default {
 				"@dprint/oxc",
 				"@dprint/toml",
 				"dprint-plugin-yaml",
+				// Keep workspace CLIs available for manual contributor use.
+				"correctly",
 			],
 		},
 		"packages/correctly": {
