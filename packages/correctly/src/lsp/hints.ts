@@ -12,7 +12,7 @@ import type { Engine } from "../core/engine.ts"
 
 // Only the schema-selection accessor is hidden. The original AST (including
 // $schema as ordinary data) is retained by every bound traversal method.
-export function externalSelection(document: JSONDocument): JSONDocument {
+function externalSelection(document: JSONDocument): JSONDocument {
 	return new Proxy(document, {
 		get(target, key) {
 			if (key === "root") return undefined

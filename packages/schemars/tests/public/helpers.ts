@@ -12,12 +12,12 @@ afterEach(async () => {
 			.map((directory) => rm(directory, { recursive: true, force: true })),
 	)
 })
-export async function temp(): Promise<string> {
+async function temp(): Promise<string> {
 	const root = await mkdtemp(path.join(os.tmpdir(), "schemars-test-"))
 	temporary.push(root)
 	return root
 }
-export async function put(
+async function put(
 	root: string,
 	file: string,
 	value: unknown,
