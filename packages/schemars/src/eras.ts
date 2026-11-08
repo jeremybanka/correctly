@@ -64,6 +64,7 @@ type ClosedRanges<
 	: Ranges
 
 // Distribute over eras before constructing ranges so they cannot cross eras.
+/** @internal Compile-time contract tested in tests/private/era-types.ts. */
 export type VersionSelection<Era extends EraDefinition> =
 	Era extends EraDefinition
 		? Era["versions"][number] | ClosedRanges<Era["versions"]>

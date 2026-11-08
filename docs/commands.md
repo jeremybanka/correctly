@@ -22,3 +22,9 @@ Run from the repository root with `pnpm run <command>`. `mise.toml` selects Node
 | `release:version`   | Prepare versions and release metadata without publishing.                                                                                                                   |
 
 CI runs `check`, `test:schemars`, `test`, `test:breakage`, `build`, `build:vsix`, `build:zed`, and `test:distribution`. Source tests and builds run independently. Distribution checks run after building the artifacts they inspect. The release workflow versions and publishes with Changesets. Each new stable Schemars release requires an explicit compatibility review and its own `@correctlyjs/schemars` changeset and release. Before 1.0, features/fixes use patches and breaking changes use minors.
+
+## Unused code
+
+Run `pnpm run check:unused` to check workspace files, exports, types, and dependencies. Run `pnpm run check:unused:production` to check production entrypoints without tests, examples, or contributor scripts keeping source code reachable. Both commands participate in `check` and run sequentially in a dedicated Knip CI job alongside the other static checks. Findings fail the check; neither command deletes code.
+
+`knip.ts` preserves published entrypoint exports and accounts for executable configuration, workers, examples, and fixture projects. Review findings against public API and dynamically loaded inputs before removing code; source reachability does not measure final bundle size.

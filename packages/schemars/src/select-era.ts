@@ -1,5 +1,6 @@
 import { schemarsEras, type EraDefinition, type SchemarsEra } from "./eras.ts"
 
+/** @internal Exported for focused implementation tests. */
 export function compareVersions(left: string, right: string): number {
 	const a = left.split(".").map(Number),
 		b = right.split(".").map(Number)
