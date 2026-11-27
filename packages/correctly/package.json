@@ -67,7 +67,7 @@
 	},
 	"devDependencies": {
 		"@breakage/changesets": "0.1.0",
-		"@types/node": "26.6.10",
+		"@types/node": "26.6.11",
 		"@types/picomatch": "4.0.3",
 		"@types/vscode": "1.146.0",
 		"breakage": "0.10.2"
