@@ -7,6 +7,6 @@ node = "26.13.1"
 pnpm = "12.23.0"
 
 [tools.rust]
-version = "1.100.0"
+version = "1.100.1"
 components = ["rustfmt"]
 targets = ["wasm32-wasip2"]
